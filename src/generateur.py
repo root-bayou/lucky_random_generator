@@ -1,8 +1,6 @@
 """
-Générateur cryptographique — cœur du projet
-Zéro PRNG : utilise secrets.randbelow() / secrets.choice() qui appellent
-os.urandom (CryptGenRandom sur Windows) avec rejection sampling.
-Distribution strictement uniforme sans aucun état interne prédictible.
+0 PRNG : secrets.randbelow() / secrets.choice()
+os.urandom (CryptGenRandom for Windows) 
 """
 
 import secrets

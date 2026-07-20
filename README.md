@@ -1,7 +1,7 @@
 # 🎰 FDJ RNG — Cryptographic Lottery Generator
 
-A cryptographically secure combination generator for three **FDJ** (French National Lottery) games:
-**EuroMillions**, **Loto**, and **Crescendo**.
+A cryptographically secure combination generator for four **FDJ** (French National Lottery) games:
+**EuroMillions**, **EuroDreams**, **Loto**, and **Crescendo**.
 
 Zero PRNG — powered by `os.urandom` (CryptGenRandom on Windows, `/dev/urandom` on Linux/Android)
 with Fisher-Yates partial shuffle and rejection sampling for a perfectly uniform distribution.
@@ -36,6 +36,8 @@ pip install rich colorama
 ## 🚀 Usage
 
 ### Web interface (mobile-friendly)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://lucky-random-generator.streamlit.app/)
+
 ```bash
 python -m streamlit run streamlit_app.py
 # Then open http://localhost:8501

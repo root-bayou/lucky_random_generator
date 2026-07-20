@@ -87,7 +87,7 @@ SUBTITLES = {
     "euromillions": "5 numbers (1–50) + 2 stars (1–12)",
     "eurodreams":   "6 numbers (1–40) + 1 dream number (1–5)",
     "loto":         "5 numbers (1–49) + 1 lucky number (1–10)",
-    "crescendo":    "10 grids · 5 random + 5 pattern-biased",
+    "crescendo":    "random + pattern-biased grids",
 }
 
 st.title(f"🎰 FDJ RNG — {TITLES[jeu]}")
@@ -100,32 +100,36 @@ st.caption(
 st.divider()
 
 # ─── Options ──────────────────────────────────────────────────
-if jeu != "crescendo":
-    nb = st.slider("Number of combinations", 1, 10, 1)
+if jeu == "crescendo":
+    nb = st.slider(
+        "Number of grids per type", 1, 10, 5,
+        help="Generates N random grids + N pattern-biased grids",
+    )
 else:
-    nb = None
+    nb = st.slider("Number of grids", 1, 10, 1)
 
 # ─── Generate button ──────────────────────────────────────────
-BTN_LABELS = {
-    "euromillions": "🌟  GENERATE",
-    "eurodreams":   "💫  GENERATE",
-    "loto":         "🍀  GENERATE",
-    "crescendo":    "🎲  GENERATE 10 GRIDS",
-}
+BTN_ICONS = {"euromillions": "🌟", "eurodreams": "💫", "loto": "🍀", "crescendo": "🎲"}
+_icon = BTN_ICONS[jeu]
+if jeu == "crescendo":
+    _btn_label = f"{_icon}  GENERATE {nb * 2} GRIDS  ({nb} random + {nb} pattern)"
+else:
+    _btn_label = f"{_icon}  GENERATE {nb} GRID{'S' if nb > 1 else ''}"
 
-if st.button(BTN_LABELS[jeu], use_container_width=True, type="primary"):
+if st.button(_btn_label, use_container_width=True, type="primary"):
     gen = Generateur(jeu, historique)
 
     if jeu == "crescendo":
         refs, resultats = [], []
-        for _ in range(5):
+        for _ in range(nb):
             combo, meta = gen.generer()
             meta["mode"] = "random"
             refs.append(combo)
             resultats.append((combo, meta))
-        for _ in range(5):
+        for _ in range(nb):
             combo, meta = gen.generer_pseudo(refs)
             resultats.append((combo, meta))
+        st.session_state["crescendo_nb"] = nb
     else:
         resultats = []
         for _ in range(nb):
@@ -146,8 +150,9 @@ if (
     html = ""
 
     if jeu_r == "crescendo":
+        _nb = st.session_state.get("crescendo_nb", nb)
         for idx, (combo, meta) in enumerate(resultats, 1):
-            if idx == 6:
+            if idx == _nb + 1:
                 html += '<div class="sep"></div>'
             mode_lbl = "🎲 Random"  if meta.get("mode") == "random" else "🔄 Pattern"
             mode_cls = "mode-r"     if meta.get("mode") == "random" else "mode-p"
@@ -168,7 +173,7 @@ if (
             )
         st.markdown(html, unsafe_allow_html=True)
         st.divider()
-        st.caption("🎲 pure random · 🔄 pattern from first 5 · ✓ new · ⚠ already drawn in FDJ history")
+        st.caption(f"🎲 {_nb} random · 🔄 {_nb} pattern-biased · ✓ new · ⚠ already drawn in FDJ history")
 
     else:
         for idx, (combo, meta) in enumerate(resultats, 1):

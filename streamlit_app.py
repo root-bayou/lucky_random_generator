@@ -136,7 +136,10 @@ if st.button(BTN_LABELS[jeu], use_container_width=True, type="primary"):
     st.session_state["jeu_result"] = jeu
 
 # ─── Results display ──────────────────────────────────────────
-if "resultats" in st.session_state:
+if (
+    "resultats" in st.session_state
+    and st.session_state.get("jeu_result") == jeu
+):
     resultats = st.session_state["resultats"]
     jeu_r     = st.session_state["jeu_result"]
 
@@ -222,7 +225,7 @@ if "resultats" in st.session_state:
                 st.markdown(ov_html, unsafe_allow_html=True)
                 st.caption("🔥 orange = appeared in last N draws · 🔵 blue = not recently drawn")
 
-
+    else:
         for idx, (combo, meta) in enumerate(resultats, 1):
             nums_html = "".join(
                 f'<span class="num">{n:02d}</span>' for n in combo["numeros"]

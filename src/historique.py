@@ -271,3 +271,13 @@ class Historique:
         if self.jeu != "crescendo":
             return list(self.combos)
         return self._tirages_crescendo
+
+    def recent_pool_crescendo(self, n_draws: int) -> set[int]:
+        """Return all unique numbers that appeared in the last n_draws Crescendo draws."""
+        if self.jeu != "crescendo":
+            return set()
+        return {
+            num
+            for t in self._tirages_crescendo[:n_draws]
+            for num in t["numeros"]
+        }

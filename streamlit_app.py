@@ -99,6 +99,37 @@ st.caption(
 
 st.divider()
 
+# ─── How it works ─────────────────────────────────────────────
+with st.expander("🔐 How does the randomness work?", expanded=False):
+    st.markdown("""
+**Source of randomness — `os.urandom`**
+
+Every number is drawn by calling `secrets.randbelow()`, which reads directly from the
+operating system's entropy pool (`CryptGenRandom` on Windows, `/dev/urandom` on Linux).
+There is **no seed, no internal state, no PRNG** — each draw consumes fresh entropy independently.
+
+**Algorithm — Fisher-Yates partial shuffle**
+
+To pick *k* numbers from a pool of *N* without replacement, the generator performs a partial
+Fisher-Yates shuffle with rejection sampling, giving each combination an exactly equal probability:
+
+$$P = \\frac{1}{\\binom{N}{k}}$$
+
+**History cross-check**
+
+Every generated grid is compared against all official past FDJ draws loaded at startup.
+A ⚠️ badge flags any grid that has already been drawn in an official FDJ game.
+
+**Crescendo — Pattern mode**
+
+For Crescendo, half the grids are *pure random* (🎲) and half are *pattern-biased* (🔄):
+3 to 5 numbers are reused from the random grids, the rest are freshly drawn from `os.urandom`.
+This mimics the statistical clustering observed in real Crescendo draws without weakening
+the entropy of the independent numbers.
+
+> **This tool cannot predict lottery results.** Every official draw is independent.
+""")
+
 # ─── Options ──────────────────────────────────────────────────
 if jeu == "crescendo":
     nb = st.slider(

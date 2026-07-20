@@ -31,12 +31,14 @@ except ImportError:
 
 EMOJIS = {
     "euromillions": "🌟",
+    "eurodreams":   "💫",
     "loto":         "🍀",
     "crescendo":    "🎵",
 }
 
 TITRES = {
     "euromillions": "EUROMILLIONS",
+    "eurodreams":   "EURODREAMS",
     "loto":         "LOTO",
     "crescendo":    "CRESCENDO",
 }
@@ -128,6 +130,9 @@ class Affichage:
         if type_comp == "etoiles":
             comp_str = "  ".join(f"[bold black on yellow] ❆{e:02d} [/]" for e in complement)
             comp_label = "STARS"
+        elif type_comp == "dream":
+            comp_str = f"[bold white on magenta] 💫 {complement:02d} [/]"
+            comp_label = "DREAM"
         elif type_comp == "chance":
             comp_str = f"[bold white on red] {complement:02d} [/]"
             comp_label = "CHANCE"
@@ -170,6 +175,9 @@ class Affichage:
         if type_comp == "etoiles":
             comp_str = " ".join(f"✦{e:02d}" for e in complement)
             comp_label = "STARS"
+        elif type_comp == "dream":
+            comp_str = f"💫 {complement:02d}"
+            comp_label = "DREAM"
         elif type_comp == "chance":
             comp_str = f"{complement:02d}"
             comp_label = "CHANCE"

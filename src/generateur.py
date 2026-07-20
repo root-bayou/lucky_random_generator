@@ -12,6 +12,10 @@ CONFIGS = {
         "numeros": {"min": 1, "max": 50, "count": 5},
         "complement": {"type": "etoiles", "min": 1, "max": 12, "count": 2},
     },
+    "eurodreams": {
+        "numeros": {"min": 1, "max": 40, "count": 6},
+        "complement": {"type": "dream", "min": 1, "max": 5, "count": 1},
+    },
     "loto": {
         "numeros": {"min": 1, "max": 49, "count": 5},
         "complement": {"type": "chance", "min": 1, "max": 10, "count": 1},

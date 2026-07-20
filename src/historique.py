@@ -22,6 +22,7 @@ VALID_LETTERS = ["S", "A", "M", "E", "D", "I"]
 # etc/ subfolders per game
 FOLDERS_PER_GAME = {
     "euromillions": ["euro_m"],
+    "eurodreams":   ["euro_d"],
     "loto":         ["loto", "grand_loto", "super_loto"],
 }
 
@@ -93,6 +94,18 @@ class Historique:
                                         int(row["etoile_2"]),
                                     ]))
                                     self.combos.add((nums, stars))
+
+                                elif self.jeu == "eurodreams":
+                                    nums = tuple(sorted([
+                                        int(row["boule_1"]),
+                                        int(row["boule_2"]),
+                                        int(row["boule_3"]),
+                                        int(row["boule_4"]),
+                                        int(row["boule_5"]),
+                                        int(row["boule_6"]),
+                                    ]))
+                                    dream = int(row["numero_dream"])
+                                    self.combos.add((nums, dream))
 
                                 elif self.jeu == "loto":
                                     # Skip old 6-ball files (no numero_chance column)

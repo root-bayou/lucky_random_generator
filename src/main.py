@@ -12,7 +12,7 @@ from historique import Historique
 from affichage import Affichage
 
 
-ALIAS_JEU = {"e": "euromillions", "l": "loto", "c": "crescendo"}
+ALIAS_JEU = {"e": "euromillions", "d": "eurodreams", "l": "loto", "c": "crescendo"}
 
 
 def parse_args():
@@ -22,11 +22,12 @@ def parse_args():
     )
     parser.add_argument(
         "--jeu",
-        choices=["e", "l", "c", "euromillions", "loto", "crescendo"],
+        choices=["e", "d", "l", "c", "euromillions", "eurodreams", "loto", "crescendo"],
         required=True,
         help=(
             "Game to generate:\n"
             "  e / euromillions → 5 numbers (1-50) + 2 stars (1-12)\n"
+            "  d / eurodreams   → 6 numbers (1-40) + 1 dream number (1-5)\n"
             "  l / loto         → 5 numbers (1-49) + 1 lucky number (1-10)\n"
             "  c / crescendo    → 10 numbers (1-25) + 1 letter (S/A/M/E/D/I)"
         )

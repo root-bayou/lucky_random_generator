@@ -31,6 +31,8 @@ st.markdown("""
             border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
   .star   { display: inline-block; background: #6b5000; color: #ffd700;
             border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
+  .dream  { display: inline-block; background: #4a006b; color: #e0aaff;
+            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
   .chance { display: inline-block; background: #7a0000; color: #fff;
             border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
   .mode-r { color: #4fc3f7; font-size: 0.85rem; }
@@ -45,6 +47,7 @@ st.markdown("""
 # ─── Game selector ────────────────────────────────────────────
 GAMES = {
     "🌟 EuroMillions": "euromillions",
+    "💫 EuroDreams":   "eurodreams",
     "🍀 Loto":         "loto",
     "🎵 Crescendo":    "crescendo",
 }
@@ -72,11 +75,13 @@ historique = load_historique(jeu)
 # ─── Header ───────────────────────────────────────────────────
 TITLES = {
     "euromillions": "🌟 EuroMillions",
+    "eurodreams":   "💫 EuroDreams",
     "loto":         "🍀 Loto",
     "crescendo":    "🎵 Crescendo",
 }
 SUBTITLES = {
     "euromillions": "5 numbers (1–50) + 2 stars (1–12)",
+    "eurodreams":   "6 numbers (1–40) + 1 dream number (1–5)",
     "loto":         "5 numbers (1–49) + 1 lucky number (1–10)",
     "crescendo":    "10 grids · 5 random + 5 pattern-biased",
 }
@@ -99,6 +104,7 @@ else:
 # ─── Generate button ──────────────────────────────────────────
 BTN_LABELS = {
     "euromillions": "🌟  GENERATE",
+    "eurodreams":   "💫  GENERATE",
     "loto":         "🍀  GENERATE",
     "crescendo":    "🎲  GENERATE 10 GRIDS",
 }
@@ -166,6 +172,8 @@ if "resultats" in st.session_state:
                 comp_html = " &nbsp;✦ " + "".join(
                     f'<span class="star">{e:02d}</span>' for e in combo["complement"]
                 )
+            elif jeu_r == "eurodreams":
+                comp_html = f' &nbsp;💫 <span class="dream">{combo["complement"]:02d}</span>'
             else:
                 comp_html = f' &nbsp;🍀 <span class="chance">{combo["complement"]:02d}</span>'
 
@@ -184,6 +192,8 @@ if "resultats" in st.session_state:
         st.divider()
         if jeu_r == "euromillions":
             st.caption("🔵 numbers · ✦ stars · ✓ new · ⚠ already drawn in FDJ history")
+        elif jeu_r == "eurodreams":
+            st.caption("🔵 numbers · 💫 dream number · ✓ new · ⚠ already drawn in FDJ history")
         else:
             st.caption("🔵 numbers · 🍀 lucky number · ✓ new · ⚠ already drawn in FDJ history")
 

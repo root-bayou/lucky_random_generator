@@ -5,12 +5,31 @@ Browser access: PC, tablet, smartphone
 
 import sys
 from pathlib import Path
+from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 import streamlit as st
 from generateur import Generateur
-from historique import Historique
+from historique import Historique, ETC_DIR, FOLDERS_PER_GAME
+
+APP_VERSION = "1.0.0"
+
+@st.cache_data
+def last_data_update(game: str) -> str:
+    """Return the date of the most recently modified CSV for this game."""
+    if game == "crescendo":
+        folders = [ETC_DIR / "crescendo"]
+    else:
+        folders = [ETC_DIR / f for f in FOLDERS_PER_GAME.get(game, [])]
+    mtimes = [
+        f.stat().st_mtime
+        for folder in folders if folder.exists()
+        for f in folder.glob("*.csv")
+    ]
+    if not mtimes:
+        return "unknown"
+    return datetime.fromtimestamp(max(mtimes)).strftime("%Y-%m-%d")
 
 # ─── Page config ───────────────────────────────────────────────
 st.set_page_config(
@@ -91,8 +110,10 @@ SUBTITLES = {
 }
 
 st.title(f"🎰 FDJ RNG — {TITLES[jeu]}")
+_data_date = last_data_update(jeu)
 st.caption(
     f"📚 {historique.nb_tirages()} FDJ draws · "
+    f"📅 Data: {_data_date} · "
     "🔐 os.urandom (zero PRNG) · "
     f"{SUBTITLES[jeu]}"
 )
@@ -242,13 +263,14 @@ if (
 
 # ─── Disclaimer ───────────────────────────────────────────────
 st.divider()
-st.markdown("""
+st.markdown(f"""
 <div style="font-size:0.78rem;color:#888;text-align:center;line-height:1.6">
   ⚠️ <strong>Disclaimer</strong> — This tool is a statistical utility.
   It does <em>not</em> predict lottery outcomes.<br>
   Every draw is pure chance — each combination has an identical probability of winning.<br>
   Gambling carries risks. Please play responsibly.<br>
-  🇫🇷 Problem Gambling Helpline: <strong>09 74 75 13 13</strong> (France, free 24/7)
+  🇫🇷 Problem Gambling Helpline: <strong>09 74 75 13 13</strong> (France, free 24/7)<br>
+  <span style="opacity:0.45">v{APP_VERSION}</span>
 </div>
 """, unsafe_allow_html=True)
 

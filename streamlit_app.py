@@ -209,3 +209,15 @@ if (
         else:
             st.caption("🔵 numbers · 🍀 lucky number · ✓ new · ⚠ already drawn in FDJ history")
 
+# ─── Disclaimer ───────────────────────────────────────────────
+st.divider()
+st.markdown("""
+<div style="font-size:0.78rem;color:#888;text-align:center;line-height:1.6">
+  ⚠️ <strong>Disclaimer</strong> — This tool is a statistical utility.
+  It does <em>not</em> predict lottery outcomes.<br>
+  Every draw is pure chance — each combination has an identical probability of winning.<br>
+  Gambling carries risks. Please play responsibly.<br>
+  🇫🇷 Problem Gambling Helpline: <strong>09 74 75 13 13</strong> (France, free 24/7)
+</div>
+""", unsafe_allow_html=True)
+

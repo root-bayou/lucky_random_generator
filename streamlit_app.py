@@ -1,6 +1,6 @@
 """
-FDJ RNG — Interface Streamlit (web / mobile)
-Accès navigateur : PC, tablette, smartphone
+FDJ RNG — Streamlit web interface (web / mobile)
+Browser access: PC, tablet, smartphone
 """
 
 import sys
@@ -37,7 +37,7 @@ st.markdown("""
 
 
 # ─── Chargement historique (mis en cache) ─────────────────────
-@st.cache_resource(show_spinner="Chargement historique FDJ…")
+@st.cache_resource(show_spinner="Loading FDJ history…")
 def load_historique():
     return Historique("crescendo")
 
@@ -48,16 +48,16 @@ historique = load_historique()
 # ─── En-tête ──────────────────────────────────────────────────
 st.title("🎵 FDJ RNG — Crescendo")
 st.caption(
-    f"📚 {historique.nb_tirages()} tirages FDJ chargés · "
-    "🔐 os.urandom (zéro PRNG) · "
-    "🎲×5 aléatoire + 🔄×5 tendances"
+    f"📚 {historique.nb_tirages()} FDJ draws loaded \u00b7 "
+    "🔐 os.urandom (zero PRNG) \u00b7 "
+    "🎲×5 random + 🔄×5 pattern"
 )
 
 st.divider()
 
 
 # ─── Bouton génération ────────────────────────────────────────
-if st.button("🎲  GÉNÉRER 10 GRILLES", use_container_width=True, type="primary"):
+if st.button("🎲  GENERATE 10 GRIDS", use_container_width=True, type="primary"):
 
     gen = Generateur("crescendo", historique)
 
@@ -84,10 +84,10 @@ if "resultats" in st.session_state:
         if idx == 6:
             html += '<div class="sep"></div>'
 
-        mode_label = "🎲 Aléatoire" if meta.get("mode") == "random" else "🔄 Tendances"
-        mode_cls   = "mode-r"        if meta.get("mode") == "random" else "mode-p"
-        hist_html  = '<span class="warn">⚠ Déjà sortie</span>' if meta.get("deja_sortie") \
-                     else '<span class="ok">✓</span>'
+        mode_label = "🎲 Random"   if meta.get("mode") == "random" else "🔄 Pattern"
+        mode_cls   = "mode-r"  if meta.get("mode") == "random" else "mode-p"
+        hist_html  = '<span class="warn">⚠ Already drawn</span>' if meta.get("deja_sortie") \
+                     else '<span class="ok">✓ New</span>'
 
         nums_html = "".join(f'<span class="num">{n:02d}</span>' for n in combo["numeros"])
 
@@ -102,4 +102,4 @@ if "resultats" in st.session_state:
     st.markdown(html, unsafe_allow_html=True)
 
     st.divider()
-    st.caption("🎲 aléatoire pur · 🔄 tendances des 5 premières · ✓ inédite · ⚠ déjà sortie FDJ")
+    st.caption("🎲 pure random · 🔄 pattern from first 5 · ✓ new · ⚠ already drawn in FDJ history")

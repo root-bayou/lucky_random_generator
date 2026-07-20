@@ -1,5 +1,5 @@
 """
-Filtres qualité — élimine les combinaisons "mauvaises" statistiquement
+Quality filters — discard statistically "bad" combinations
 """
 
 
@@ -10,8 +10,8 @@ class Filtres:
 
     def valider(self, numeros: list[int], complement) -> tuple[bool, str]:
         """
-        Retourne (True, "") si la combo passe tous les filtres
-        Retourne (False, raison) sinon
+        Returns (True, "") if the combo passes all filters
+        Returns (False, reason) otherwise
         """
         self.derniers_filtres_passes = []
         checks = [
@@ -41,12 +41,12 @@ class Filtres:
         impairs = len(numeros) - pairs
         # Accepte uniquement si mix (pas 100% pairs ni 100% impairs)
         if pairs == 0:
-            return False, "Tous les numéros sont impairs"
+            return False, "All numbers are odd"
         if impairs == 0:
-            return False, "Tous les numéros sont pairs"
+            return False, "All numbers are even"
         return True, ""
 
-    # Midpoint fixe par jeu (plage officielle, pas dynamique)
+    # Fixed midpoint per game (official range, not dynamic)
     _MIDPOINT = {"euromillions": 25, "loto": 25, "crescendo": 12}
 
     def _check_tous_petits_grands(self, numeros, _):
@@ -54,13 +54,13 @@ class Filtres:
         petits = sum(1 for n in numeros if n <= milieu)
         grands = len(numeros) - petits
         if petits == 0:
-            return False, "Tous les numéros sont grands"
+            return False, "All numbers are high"
         if grands == 0:
-            return False, "Tous les numéros sont petits"
+            return False, "All numbers are low"
         return True, ""
 
     def _check_consecutifs(self, numeros, _):
-        # Refuse ≥3 consécutifs d'affilée (EuroMillions/Loto), ≥4 pour Crescendo
+        # Reject ≥3 consecutive (EuroMillions/Loto), ≥4 for Crescendo
         max_consec = 1
         consec = 1
         for i in range(1, len(numeros)):
@@ -71,43 +71,43 @@ class Filtres:
                 consec = 1
         seuil = 4 if self.jeu == "crescendo" else 3
         if max_consec >= seuil:
-            return False, f"{max_consec} numéros consécutifs détectés"
+            return False, f"{max_consec} consecutive numbers detected"
         return True, ""
 
     def _check_suite_arithmetique(self, numeros, _):
-        # Refuse les suites arithmétiques parfaites (5-10-15-20-25)
+        # Reject perfect arithmetic sequences (e.g. 5-10-15-20-25)
         if len(numeros) < 4:
             return True, ""
         diffs = [numeros[i+1] - numeros[i] for i in range(len(numeros)-1)]
         if len(set(diffs)) == 1:
-            return False, "Suite arithmétique parfaite détectée"
+            return False, "Perfect arithmetic sequence detected"
         return True, ""
 
     def _check_multiples(self, numeros, _):
-        # Refuse si tous multiples d'un même chiffre (ex: 3,6,9,12,15)
+        # Reject if all numbers are multiples of the same divisor (e.g. 3,6,9,12,15)
         for diviseur in range(2, 8):
             if all(n % diviseur == 0 for n in numeros):
-                return False, f"Tous multiples de {diviseur}"
+                return False, f"All multiples of {diviseur}"
         return True, ""
 
     def _check_dates_uniquement(self, numeros, _):
-        # Refuse si tous les numéros sont <= 31 (biais dates anniversaires)
+        # Reject if all numbers are ≤ 31 (birthday bias)
         if all(n <= 31 for n in numeros):
-            return False, "Tous les numéros ≤ 31 (biais dates)"
+            return False, "All numbers ≤ 31 (date bias)"
         return True, ""
 
     def _check_etoiles_consecutives(self, numeros, complement):
-        # Refuse les étoiles consécutives (1-2, 5-6, etc.)
+        # Reject consecutive stars (1-2, 5-6, etc.)
         if isinstance(complement, list) and len(complement) == 2:
             if abs(complement[0] - complement[1]) == 1:
-                return False, "Étoiles consécutives"
+                return False, "Consecutive stars"
         return True, ""
 
     def _check_crescendo_equilibre(self, numeros, _):
-        # Pour Crescendo (10 numéros sur 1-25) :
-        # Refuse si plus de 7 numéros dans la même moitié (1-12 ou 13-25)
+        # For Crescendo (10 numbers on 1-25):
+        # Reject if more than 7 numbers in the same half (1-12 or 13-25)
         bas = sum(1 for n in numeros if n <= 12)
         haut = len(numeros) - bas
         if bas >= 8 or haut >= 8:
-            return False, f"Déséquilibre bas/haut ({bas}/{haut})"
+            return False, f"Low/high imbalance ({bas}/{haut})"
         return True, ""

@@ -1,7 +1,7 @@
 """
-Historique des tirages
-- EuroMillions / Loto : CSV FDJ dézippés manuellement dans etc/
-- Crescendo : fichier JSON manuel dans src/data/
+Draw history loader
+- EuroMillions / Loto: FDJ CSV files (manually unzipped) in etc/
+- Crescendo: manual JSON entries in src/data/
 """
 
 import json
@@ -10,17 +10,17 @@ from pathlib import Path
 from datetime import datetime
 
 
-# Dossier etc/ à la racine du projet (un niveau au-dessus de src/)
+# etc/ directory at project root (one level above src/)
 ETC_DIR = Path(__file__).parent.parent / "etc"
 
 DATA_DIR = Path(__file__).parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
 CRESCENDO_JSON = DATA_DIR / "historique_crescendo.json"
-LETTRES_VALIDES = ["S", "A", "M", "E", "D", "I"]
+VALID_LETTERS = ["S", "A", "M", "E", "D", "I"]
 
-# Sous-dossiers etc/ par jeu (loto = tous les tirages loto FDJ)
-DOSSIERS_PAR_JEU = {
+# etc/ subfolders per game
+FOLDERS_PER_GAME = {
     "euromillions": ["euro_m"],
     "loto":         ["loto", "grand_loto", "super_loto"],
 }
@@ -29,8 +29,8 @@ DOSSIERS_PAR_JEU = {
 class Historique:
     def __init__(self, jeu: str):
         self.jeu = jeu
-        self.combos = set()          # set de tuples pour recherche O(1)
-        self._tirages_crescendo = [] # liste complète pour affichage
+        self.combos: set = set()           # O(1) lookup set
+        self._tirages_crescendo: list = []  # full list for display
         self._charger()
 
     def _charger(self):
@@ -40,44 +40,43 @@ class Historique:
             self._charger_fdj_csv()
 
     # ─────────────────────────────────────────
-    # EUROMILLIONS / LOTO — CSV locaux (etc/)
+    # EUROMILLIONS / LOTO — local CSV (etc/)
     # ─────────────────────────────────────────
 
     def _charger_fdj_csv(self):
         """
-        Charge tous les CSV depuis les sous-dossiers etc/ correspondant au jeu.
-        Les fichiers sont dézippés manuellement depuis le site FDJ.
+        Load all CSV files from the etc/ subfolders for the current game.
+        Files are manually unzipped from the FDJ website.
           euromillions → etc/euro_m/
           loto         → etc/loto/, etc/grand_loto/, etc/super_loto/
-        Les fichiers anciens format (6 boules sans numero_chance) sont ignorés
-        silencieusement via le try/except dans _parser_csv.
+        Old-format files (6 balls, no numero_chance) are silently skipped.
         """
         if not ETC_DIR.exists():
-            print(f"⚠️  Dossier etc/ introuvable — historique {self.jeu} désactivé.")
+            print(f"⚠️  etc/ directory not found — {self.jeu} history disabled.")
             return
 
-        sous_dossiers = DOSSIERS_PAR_JEU.get(self.jeu, [])
-        fichiers = []
-        for dossier in sous_dossiers:
-            chemin_dossier = ETC_DIR / dossier
-            if chemin_dossier.exists():
-                fichiers.extend(sorted(chemin_dossier.glob("*.csv")))
+        subfolders = FOLDERS_PER_GAME.get(self.jeu, [])
+        files = []
+        for folder in subfolders:
+            folder_path = ETC_DIR / folder
+            if folder_path.exists():
+                files.extend(sorted(folder_path.glob("*.csv")))
 
-        if not fichiers:
-            print(f"⚠️  Aucun CSV trouvé dans etc/ pour {self.jeu} — historique désactivé.")
+        if not files:
+            print(f"⚠️  No CSV found in etc/ for {self.jeu} — history disabled.")
             return
 
-        for chemin in fichiers:
-            self._parser_csv(chemin)
+        for path in files:
+            self._parser_csv(path)
 
-        print(f"✅ {len(self.combos)} tirages chargés ({len(fichiers)} fichier(s)).")
+        print(f"✅ {len(self.combos)} draws loaded ({len(files)} file(s)).")
 
     def _parser_csv(self, chemin: Path):
-        """Parse le CSV FDJ et stocke les combos comme tuples."""
+        """Parse a FDJ CSV file and store combos as tuples."""
         try:
-            for encodage in ("utf-8", "latin-1"):
+            for encoding in ("utf-8", "latin-1"):
                 try:
-                    with open(chemin, encoding=encodage) as f:
+                    with open(chemin, encoding=encoding) as f:
                         reader = csv.DictReader(f, delimiter=";")
                         for row in reader:
                             try:
@@ -89,14 +88,14 @@ class Historique:
                                         int(row["boule_4"]),
                                         int(row["boule_5"]),
                                     ]))
-                                    etoiles = tuple(sorted([
+                                    stars = tuple(sorted([
                                         int(row["etoile_1"]),
                                         int(row["etoile_2"]),
                                     ]))
-                                    self.combos.add((nums, etoiles))
+                                    self.combos.add((nums, stars))
 
                                 elif self.jeu == "loto":
-                                    # Ignore les anciens fichiers à 6 boules (pas de numero_chance)
+                                    # Skip old 6-ball files (no numero_chance column)
                                     if "numero_chance" not in row:
                                         break
                                     nums = tuple(sorted([
@@ -110,20 +109,20 @@ class Historique:
                                     self.combos.add((nums, chance))
                             except (ValueError, KeyError):
                                 continue
-                    break  # lecture réussie, pas besoin d'essayer latin-1
+                    break  # successful read, no need to try latin-1
                 except UnicodeDecodeError:
                     continue
         except Exception as e:
-            print(f"⚠️  Erreur lecture CSV : {e}")
+            print(f"⚠️  CSV read error: {e}")
 
     # ─────────────────────────────────────────
-    # CRESCENDO — JSON manuel
+    # CRESCENDO — manual JSON + official CSV
     # ─────────────────────────────────────────
 
     def _charger_crescendo(self):
-        """Charge l'historique Crescendo depuis :
-        - etc/crescendo/*.csv  (format FDJ officiel : boule1…boule10 + lettre)
-        - src/data/historique_crescendo.json  (entrées manuelles)
+        """Load Crescendo history from:
+        - etc/crescendo/*.csv  (official FDJ format: boule1…boule10 + lettre)
+        - src/data/historique_crescendo.json  (manual entries)
         """
         # 1) CSV officiels FDJ
         crescendo_dir = ETC_DIR / "crescendo"
@@ -139,9 +138,9 @@ class Historique:
                                         int(row[f"boule{i}"]) for i in range(1, 11)
                                     ))
                                     lettre = row["lettre"].strip().upper()
-                                    if lettre not in LETTRES_VALIDES:
+                                    if lettre not in VALID_LETTERS:
                                         continue
-                                    self.combos.add(nums)  # lettre ignorée
+                                    self.combos.add(nums)  # letter ignored
                                     self._tirages_crescendo.append({
                                         "date":    row.get("date_de_tirage", ""),
                                         "heure":   row.get("heure_de_tirage", "")[:5],
@@ -165,9 +164,9 @@ class Historique:
                     self.combos.add(nums)  # lettre ignorée
                     self._tirages_crescendo.append(entry)
             except Exception as e:
-                print(f"⚠️  Erreur lecture historique Crescendo JSON : {e}")
+                print(f"⚠️  Crescendo JSON read error: {e}")
 
-        # Trier par date décroissante pour l'affichage
+        # Sort by date descending for display
         def _sort_key(t):
             d = t.get("date", "")
             try:
@@ -181,40 +180,40 @@ class Historique:
         self._tirages_crescendo.sort(key=_sort_key, reverse=True)
 
     def ajouter_tirage_crescendo_interactif(self):
-        """Mode interactif pour ajouter un tirage Crescendo manuellement."""
-        print("\n📝 Ajout d'un tirage Crescendo")
+        """Interactive mode to manually add a Crescendo draw."""
+        print("\n📝 Add a Crescendo draw")
         print("─" * 40)
 
         # Date
-        date_str = input("Date du tirage (YYYY-MM-DD, Entrée = aujourd'hui) : ").strip()
+        date_str = input("Draw date (YYYY-MM-DD, Enter = today): ").strip()
         if not date_str:
             date_str = datetime.now().strftime("%Y-%m-%d")
 
-        # Heure
-        heures_valides = ["13h", "14h", "15h", "16h", "17h", "18h", "19h"]
+        # Time
+        valid_times = ["13h", "14h", "15h", "16h", "17h", "18h", "19h"]
         heure = ""
-        while heure not in heures_valides:
-            heure = input(f"Heure {heures_valides} : ").strip()
+        while heure not in valid_times:
+            heure = input(f"Time {valid_times}: ").strip()
 
-        # Numéros
+        # Numbers
         numeros = []
         while len(numeros) != 10:
-            raw = input("10 numéros tirés (séparés par virgule, 1-25) : ").strip()
+            raw = input("10 drawn numbers (comma-separated, 1-25): ").strip()
             try:
                 numeros = sorted(set(int(x) for x in raw.split(",")))
                 if len(numeros) != 10 or not all(1 <= n <= 25 for n in numeros):
-                    print("❌ Exactement 10 numéros distincts entre 1 et 25.")
+                    print("❌ Exactly 10 distinct numbers between 1 and 25.")
                     numeros = []
             except ValueError:
-                print("❌ Format invalide.")
+                print("❌ Invalid format.")
                 numeros = []
 
-        # Lettre
+        # Letter
         lettre = ""
-        while lettre not in LETTRES_VALIDES:
-            lettre = input(f"Lettre tirée {LETTRES_VALIDES} : ").strip().upper()
+        while lettre not in VALID_LETTERS:
+            lettre = input(f"Drawn letter {VALID_LETTERS}: ").strip().upper()
 
-        # Sauvegarde
+        # Save
         data = json.loads(CRESCENDO_JSON.read_text(encoding="utf-8"))
         data.append({
             "date": date_str,
@@ -226,15 +225,15 @@ class Historique:
             json.dumps(data, ensure_ascii=False, indent=2),
             encoding="utf-8"
         )
-        print(f"\n✅ Tirage enregistré ! ({len(data)} tirages dans l'historique)")
+        print(f"\n✅ Draw saved! ({len(data)} draws in history)")
 
     # ─────────────────────────────────────────
-    # VÉRIFICATION
+    # LOOKUP
     # ─────────────────────────────────────────
 
     def deja_sortie(self, numeros: list[int], complement) -> bool:
-        """Vérifie si la combinaison est déjà dans l'historique.
-        Pour Crescendo : comparaison sur les numéros uniquement (lettre non choisie).
+        """Check whether the combination has already been drawn.
+        For Crescendo: comparison on numbers only (letter is not chosen by player).
         """
         if not self.combos:
             return False
@@ -255,7 +254,7 @@ class Historique:
         return len(self.combos)
 
     def tous_les_tirages(self):
-        """Retourne la liste des tirages pour affichage."""
+        """Return the list of draws for display."""
         if self.jeu != "crescendo":
             return list(self.combos)
         return self._tirages_crescendo

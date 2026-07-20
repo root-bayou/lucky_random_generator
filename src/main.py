@@ -1,6 +1,6 @@
 """
-FDJ RNG - Générateur cryptographique de combinaisons
-Supporte : EuroMillions, Loto, Crescendo
+FDJ RNG - Cryptographic lottery combination generator
+Supports: EuroMillions, Loto, Crescendo
 """
 
 import sys
@@ -17,7 +17,7 @@ ALIAS_JEU = {"e": "euromillions", "l": "loto", "c": "crescendo"}
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="🎰 FDJ RNG — Générateur cryptographique de combinaisons",
+        description="🎰 FDJ RNG — Cryptographic lottery combination generator",
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
@@ -25,27 +25,27 @@ def parse_args():
         choices=["e", "l", "c", "euromillions", "loto", "crescendo"],
         required=True,
         help=(
-            "Jeu à générer :\n"
-            "  e / euromillions → 5 numéros (1-50) + 2 étoiles (1-12)\n"
-            "  l / loto         → 5 numéros (1-49) + 1 chance (1-10)\n"
-            "  c / crescendo    → 10 numéros (1-25) + 1 lettre (S/A/M/E/D/I)"
+            "Game to generate:\n"
+            "  e / euromillions → 5 numbers (1-50) + 2 stars (1-12)\n"
+            "  l / loto         → 5 numbers (1-49) + 1 lucky number (1-10)\n"
+            "  c / crescendo    → 10 numbers (1-25) + 1 letter (S/A/M/E/D/I)"
         )
     )
     parser.add_argument(
         "--add-tirage",
         action="store_true",
-        help="[Crescendo uniquement] Ajouter un tirage à l'historique manuel"
+        help="[Crescendo only] Add a draw to the manual history"
     )
     parser.add_argument(
         "--historique",
         action="store_true",
-        help="Afficher l'historique enregistré du jeu"
+        help="Display the recorded history for the game"
     )
     parser.add_argument(
         "--nb",
         type=int,
         default=1,
-        help="Nombre de combinaisons à générer (défaut: 1)"
+        help="Number of combinations to generate (default: 1)"
     )
     return parser.parse_args()
 
@@ -56,25 +56,25 @@ def main():
     affichage = Affichage()
     historique = Historique(jeu)
 
-    # Mode affichage historique
+    # History display mode
     if args.historique:
         affichage.afficher_historique(historique, jeu)
         return
 
-    # Mode ajout tirage manuel (Crescendo uniquement)
+    # Manual draw entry mode (Crescendo only)
     if args.add_tirage:
         if jeu != "crescendo":
-            affichage.erreur("--add-tirage est uniquement disponible pour Crescendo.")
+            affichage.erreur("--add-tirage is only available for Crescendo.")
             sys.exit(1)
         historique.ajouter_tirage_crescendo_interactif()
         return
 
-    # Mode génération
+    # Generation mode
     affichage.banniere(jeu)
 
     generateur = Generateur(jeu, historique)
 
-    # Crescendo : 10 grilles (5 aléatoires + 5 pseudo-aléatoires)
+    # Crescendo: 10 grids (5 random + 5 pattern-based)
     if jeu == "crescendo":
         refs = []
         resultats = []

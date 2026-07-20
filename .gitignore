@@ -22,6 +22,9 @@ claude.md
 src/data/
 # abandoned Android build
 mobile/
+# SSH keys — never commit
+id_rsa*
+*.pem
 
 # ── IDE ────────────────────────────────────────────────────────
 .vscode/

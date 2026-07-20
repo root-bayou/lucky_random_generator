@@ -1,6 +1,6 @@
 """
-Simulation Crescendo — cross-check avec l'historique FDJ
-Usage : python sim_crescendo.py [nombre_de_tirages]
+Crescendo collision simulation — cross-check against FDJ history
+Usage: python sim_crescendo.py [number_of_draws]
 """
 
 import sys
@@ -13,8 +13,8 @@ import math
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 100_000
 
 h = Historique('crescendo')
-print(f'\nHistorique FDJ : {h.nb_tirages()} tirages')
-print(f'Simulation     : {N:,} grilles\n')
+print(f'FDJ history  : {h.nb_tirages()} draws')
+print(f'Simulation   : {N:,} grids\n')
 
 collisions = []
 
@@ -26,15 +26,15 @@ for i in range(N):
 total_combos = math.comb(25, 10)
 attendu = N * h.nb_tirages() / total_combos
 
-print(f'Collisions trouvees  : {len(collisions)}')
-print(f'Attendu theorique    : {attendu:.1f}')
-print(f'Taux                 : {len(collisions)/N*100:.4f}%')
+print(f'Collisions found     : {len(collisions)}')
+print(f'Expected (theory)    : {attendu:.1f}')
+print(f'Rate                 : {len(collisions)/N*100:.4f}%')
 print()
 
 if collisions:
-    print('Grilles deja sorties dans l\'historique FDJ :')
+    print('Grids already drawn in FDJ history:')
     for nums in collisions:
         n = '  '.join(f'{x:02d}' for x in nums)
         print(f'  {n}')
 else:
-    print('Aucune collision.')
+    print('No collisions.')

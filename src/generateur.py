@@ -8,7 +8,7 @@ Distribution strictement uniforme sans aucun état interne prédictible.
 import secrets
 
 
-# Configuration des jeux
+# Game configurations
 CONFIGS = {
     "euromillions": {
         "numeros": {"min": 1, "max": 50, "count": 5},
@@ -27,10 +27,10 @@ CONFIGS = {
 
 def tirer_sans_remplacement(pool_min: int, pool_max: int, count: int) -> list[int]:
     """
-    Tirage sans remplacement via os.urandom pur.
-    Algorithme : Fisher-Yates partiel, chaque index tiré par secrets.randbelow()
-    qui consomme des octets os.urandom avec rejection sampling.
-    Aucune graine, aucun état interne → vrai non-déterminisme.
+    Draw without replacement using pure os.urandom.
+    Algorithm: partial Fisher-Yates, each index drawn by secrets.randbelow()
+    which consumes os.urandom bytes with rejection sampling.
+    No seed, no internal state — true non-determinism.
     """
     pool = list(range(pool_min, pool_max + 1))
     result = []
@@ -61,20 +61,20 @@ class Generateur:
 
     def generer(self) -> tuple:
         """
-        Génère une combinaison :
-        1. os.urandom pur via secrets — zéro PRNG, distribution uniforme exacte
-        2. Pour Crescendo : toujours retournée, historique signalé dans meta
-           Pour les autres jeux : boucle jusqu'à une combo jamais sortie
-        Retourne (combo_dict, meta_dict)
+        Generate a combination:
+        1. Pure os.urandom via secrets — zero PRNG, exact uniform distribution
+        2. Crescendo: always returned, history match flagged in meta
+           Other games: loop until a never-drawn combination is found
+        Returns (combo_dict, meta_dict)
         """
         MAX_TENTATIVES = 100_000
 
         for tentatives in range(1, MAX_TENTATIVES + 1):
             numeros = self._generer_numeros()
-            complement = self._generer_complement()  # None pour Crescendo
+            complement = self._generer_complement()  # None for Crescendo
             deja = self.historique.deja_sortie(numeros, complement)
 
-            # Crescendo : on accepte même si déjà sortie, on le signale
+            # Crescendo: always accepted even if already drawn, flagged in meta
             if self.jeu == "crescendo" or not deja:
                 combo = {
                     "numeros": numeros,
@@ -83,44 +83,44 @@ class Generateur:
                 }
                 meta = {
                     "tentatives": tentatives,
-                    "source": "os.urandom (CryptGenRandom) — zéro PRNG",
+                    "source": "os.urandom (CryptGenRandom) — zero PRNG",
                     "deja_sortie": deja,
                 }
                 return combo, meta
 
-        raise RuntimeError(f"Impossible de générer une combinaison après {MAX_TENTATIVES} tentatives.")
+        raise RuntimeError(f"Failed to generate a combination after {MAX_TENTATIVES} attempts.")
 
     def generer_pseudo(self, refs: list[dict]) -> tuple:
         """
-        Génère une combo Crescendo en conservant ~4 numéros du pool des grilles
-        de référence (tendances) et en complétant avec des numéros purs os.urandom.
+        Generate a Crescendo grid keeping ~4 numbers from the reference grids
+        (pattern bias) and filling the rest with pure os.urandom numbers.
         """
-        # Pool de référence : union des numéros des grilles aléatoires
+        # Reference pool: union of numbers from the random reference grids
         pool_ref = list({n for combo in refs for n in combo["numeros"]})
-        pool_hors_ref = [n for n in range(1, 26) if n not in pool_ref]
+        pool_outside = [n for n in range(1, 26) if n not in pool_ref]
 
-        # Nombre de numéros "pattern" à conserver : 3, 4 ou 5
+        # Number of "pattern" numbers to keep: 3, 4 or 5
         nb_pattern = secrets.randbelow(3) + 3
         nb_pattern = min(nb_pattern, len(pool_ref))
 
-        # Tirage sans remplacement depuis pool_ref
+        # Draw without replacement from pool_ref
         pool_ref_shuffle = list(pool_ref)
         pattern = []
         for _ in range(nb_pattern):
             i = secrets.randbelow(len(pool_ref_shuffle))
             pattern.append(pool_ref_shuffle.pop(i))
 
-        # Compléter : numéros hors-ref + numéros ref non-choisis
-        reste_pool = pool_hors_ref + pool_ref_shuffle
-        nb_reste = 10 - len(pattern)
-        reste = []
-        for _ in range(nb_reste):
-            if not reste_pool:
+        # Fill remaining slots: outside pool + unused ref numbers
+        fill_pool = pool_outside + pool_ref_shuffle
+        nb_fill = 10 - len(pattern)
+        fill = []
+        for _ in range(nb_fill):
+            if not fill_pool:
                 break
-            i = secrets.randbelow(len(reste_pool))
-            reste.append(reste_pool.pop(i))
+            i = secrets.randbelow(len(fill_pool))
+            fill.append(fill_pool.pop(i))
 
-        numeros = sorted(pattern + reste)
+        numeros = sorted(pattern + fill)
 
         deja = self.historique.deja_sortie(numeros, None)
         combo = {
@@ -130,7 +130,7 @@ class Generateur:
         }
         meta = {
             "tentatives": 1,
-            "source": "os.urandom + tendances grilles 1 & 2",
+            "source": "os.urandom + pattern bias from grids 1–5",
             "deja_sortie": deja,
             "mode": "pseudo",
         }

@@ -12,94 +12,178 @@ import streamlit as st
 from generateur import Generateur
 from historique import Historique
 
-# ─── Config page ───────────────────────────────────────────────
+# ─── Page config ───────────────────────────────────────────────
 st.set_page_config(
-    page_title="FDJ RNG — Crescendo",
-    page_icon="🎵",
+    page_title="FDJ RNG",
+    page_icon="🎰",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
 
-# ─── CSS compact mobile ────────────────────────────────────────
+# ─── CSS ──────────────────────────────────────────────────────
 st.markdown("""
 <style>
-  .grid-row   { font-family: monospace; font-size: 1.05rem; padding: 6px 0; border-bottom: 1px solid #2a2a2a; }
-  .num        { display: inline-block; background: #1a4a8a; color: #fff;
-                border-radius: 4px; padding: 2px 6px; margin: 1px; font-weight: bold; }
-  .mode-r     { color: #4fc3f7; font-size: 0.85rem; }
-  .mode-p     { color: #81c784; font-size: 0.85rem; }
-  .ok         { color: #66bb6a; font-weight: bold; }
-  .warn       { color: #ef5350; font-weight: bold; }
-  .sep        { border-top: 2px solid #444; margin: 8px 0; }
-  h1          { font-size: 1.5rem !important; }
+  .grid-row  { font-family: monospace; font-size: 1.05rem; padding: 6px 0;
+               border-bottom: 1px solid #2a2a2a; }
+  .combo-row { font-family: monospace; font-size: 1.1rem; padding: 10px 0;
+               border-bottom: 1px solid #2a2a2a; }
+  .num    { display: inline-block; background: #1a4a8a; color: #fff;
+            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
+  .star   { display: inline-block; background: #6b5000; color: #ffd700;
+            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
+  .chance { display: inline-block; background: #7a0000; color: #fff;
+            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
+  .mode-r { color: #4fc3f7; font-size: 0.85rem; }
+  .mode-p { color: #81c784; font-size: 0.85rem; }
+  .ok     { color: #66bb6a; font-weight: bold; }
+  .warn   { color: #ef5350; font-weight: bold; }
+  .sep    { border-top: 2px solid #444; margin: 8px 0; }
+  h1      { font-size: 1.5rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
+# ─── Game selector ────────────────────────────────────────────
+GAMES = {
+    "🌟 EuroMillions": "euromillions",
+    "🍀 Loto":         "loto",
+    "🎵 Crescendo":    "crescendo",
+}
 
-# ─── Chargement historique (mis en cache) ─────────────────────
+choice = st.radio(
+    "Game",
+    list(GAMES.keys()),
+    index=2,
+    horizontal=True,
+    label_visibility="collapsed",
+)
+jeu = GAMES[choice]
+
+# Clear results when switching games
+if st.session_state.get("jeu_result") != jeu:
+    st.session_state.pop("resultats", None)
+
+# ─── History (cached per game) ────────────────────────────────
 @st.cache_resource(show_spinner="Loading FDJ history…")
-def load_historique():
-    return Historique("crescendo")
+def load_historique(game: str):
+    return Historique(game)
 
+historique = load_historique(jeu)
 
-historique = load_historique()
+# ─── Header ───────────────────────────────────────────────────
+TITLES = {
+    "euromillions": "🌟 EuroMillions",
+    "loto":         "🍀 Loto",
+    "crescendo":    "🎵 Crescendo",
+}
+SUBTITLES = {
+    "euromillions": "5 numbers (1–50) + 2 stars (1–12)",
+    "loto":         "5 numbers (1–49) + 1 lucky number (1–10)",
+    "crescendo":    "10 grids · 5 random + 5 pattern-biased",
+}
 
-
-# ─── En-tête ──────────────────────────────────────────────────
-st.title("🎵 FDJ RNG — Crescendo")
+st.title(f"🎰 FDJ RNG — {TITLES[jeu]}")
 st.caption(
-    f"📚 {historique.nb_tirages()} FDJ draws loaded \u00b7 "
-    "🔐 os.urandom (zero PRNG) \u00b7 "
-    "🎲×5 random + 🔄×5 pattern"
+    f"📚 {historique.nb_tirages()} FDJ draws · "
+    "🔐 os.urandom (zero PRNG) · "
+    f"{SUBTITLES[jeu]}"
 )
 
 st.divider()
 
+# ─── Options ──────────────────────────────────────────────────
+if jeu != "crescendo":
+    nb = st.slider("Number of combinations", 1, 10, 1)
+else:
+    nb = None
 
-# ─── Bouton génération ────────────────────────────────────────
-if st.button("🎲  GENERATE 10 GRIDS", use_container_width=True, type="primary"):
+# ─── Generate button ──────────────────────────────────────────
+BTN_LABELS = {
+    "euromillions": "🌟  GENERATE",
+    "loto":         "🍀  GENERATE",
+    "crescendo":    "🎲  GENERATE 10 GRIDS",
+}
 
-    gen = Generateur("crescendo", historique)
+if st.button(BTN_LABELS[jeu], use_container_width=True, type="primary"):
+    gen = Generateur(jeu, historique)
 
-    refs, resultats = [], []
-    for _ in range(5):
-        combo, meta = gen.generer()
-        meta["mode"] = "random"
-        refs.append(combo)
-        resultats.append((combo, meta))
-    for _ in range(5):
-        combo, meta = gen.generer_pseudo(refs)
-        resultats.append((combo, meta))
+    if jeu == "crescendo":
+        refs, resultats = [], []
+        for _ in range(5):
+            combo, meta = gen.generer()
+            meta["mode"] = "random"
+            refs.append(combo)
+            resultats.append((combo, meta))
+        for _ in range(5):
+            combo, meta = gen.generer_pseudo(refs)
+            resultats.append((combo, meta))
+    else:
+        resultats = []
+        for _ in range(nb):
+            combo, meta = gen.generer()
+            resultats.append((combo, meta))
 
-    st.session_state["resultats"] = resultats
+    st.session_state["resultats"]  = resultats
+    st.session_state["jeu_result"] = jeu
 
-
-# ─── Affichage résultats ──────────────────────────────────────
+# ─── Results display ──────────────────────────────────────────
 if "resultats" in st.session_state:
     resultats = st.session_state["resultats"]
+    jeu_r     = st.session_state["jeu_result"]
 
     html = ""
-    for idx, (combo, meta) in enumerate(resultats, 1):
-        # Séparateur entre les deux blocs
-        if idx == 6:
-            html += '<div class="sep"></div>'
 
-        mode_label = "🎲 Random"   if meta.get("mode") == "random" else "🔄 Pattern"
-        mode_cls   = "mode-r"  if meta.get("mode") == "random" else "mode-p"
-        hist_html  = '<span class="warn">⚠ Already drawn</span>' if meta.get("deja_sortie") \
-                     else '<span class="ok">✓ New</span>'
+    if jeu_r == "crescendo":
+        for idx, (combo, meta) in enumerate(resultats, 1):
+            if idx == 6:
+                html += '<div class="sep"></div>'
+            mode_lbl = "🎲 Random"  if meta.get("mode") == "random" else "🔄 Pattern"
+            mode_cls = "mode-r"     if meta.get("mode") == "random" else "mode-p"
+            hist_html = (
+                '<span class="warn">⚠ Already drawn</span>'
+                if meta.get("deja_sortie") else
+                '<span class="ok">✓ New</span>'
+            )
+            nums_html = "".join(
+                f'<span class="num">{n:02d}</span>' for n in combo["numeros"]
+            )
+            html += (
+                f'<div class="grid-row">'
+                f'<span style="color:#888;width:1.5rem;display:inline-block">{idx}</span>'
+                f'<span class="{mode_cls}" style="width:7rem;display:inline-block">{mode_lbl}</span>'
+                f'{nums_html} &nbsp;{hist_html}'
+                f'</div>'
+            )
+        st.markdown(html, unsafe_allow_html=True)
+        st.divider()
+        st.caption("🎲 pure random · 🔄 pattern from first 5 · ✓ new · ⚠ already drawn in FDJ history")
 
-        nums_html = "".join(f'<span class="num">{n:02d}</span>' for n in combo["numeros"])
+    else:
+        for idx, (combo, meta) in enumerate(resultats, 1):
+            nums_html = "".join(
+                f'<span class="num">{n:02d}</span>' for n in combo["numeros"]
+            )
+            if jeu_r == "euromillions":
+                comp_html = " &nbsp;✦ " + "".join(
+                    f'<span class="star">{e:02d}</span>' for e in combo["complement"]
+                )
+            else:
+                comp_html = f' &nbsp;🍀 <span class="chance">{combo["complement"]:02d}</span>'
 
-        html += (
-            f'<div class="grid-row">'
-            f'<span style="color:#888;width:1.4rem;display:inline-block">{idx}</span>'
-            f'<span class="{mode_cls}" style="width:6.5rem;display:inline-block">{mode_label}</span>'
-            f'{nums_html} &nbsp;{hist_html}'
-            f'</div>'
-        )
+            hist_html = (
+                '<span class="warn">⚠ Already drawn</span>'
+                if meta.get("deja_sortie") else
+                '<span class="ok">✓ New</span>'
+            )
+            html += (
+                f'<div class="combo-row">'
+                f'<span style="color:#888;margin-right:8px">#{idx}</span>'
+                f'{nums_html}{comp_html} &nbsp; {hist_html}'
+                f'</div>'
+            )
+        st.markdown(html, unsafe_allow_html=True)
+        st.divider()
+        if jeu_r == "euromillions":
+            st.caption("🔵 numbers · ✦ stars · ✓ new · ⚠ already drawn in FDJ history")
+        else:
+            st.caption("🔵 numbers · 🍀 lucky number · ✓ new · ⚠ already drawn in FDJ history")
 
-    st.markdown(html, unsafe_allow_html=True)
-
-    st.divider()
-    st.caption("🎲 pure random · 🔄 pattern from first 5 · ✓ new · ⚠ already drawn in FDJ history")

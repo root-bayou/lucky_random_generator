@@ -1,0 +1,37 @@
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+
+# ── Virtual environments ───────────────────────────────────────
+.env
+.venv
+venv/
+env/
+.python-version
+
+# ── Project — personal / local only ───────────────────────────
+# personal dev notes
+claude.md
+# local Crescendo manual entries (private)
+src/data/
+# abandoned Android build
+mobile/
+
+# ── IDE ────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.code-workspace
+
+# ── Streamlit local config ─────────────────────────────────────
+.streamlit/
+
+# ── OS ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

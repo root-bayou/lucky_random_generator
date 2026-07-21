@@ -65,6 +65,14 @@ st.markdown("""
   .sep    { border-top: 2px solid #444; margin: 8px 0; }
   h1      { font-size: 1.5rem !important; }
 </style>
+<script>
+  // Prevent page scroll when using mouse wheel on number inputs
+  document.addEventListener('wheel', function(e) {
+    if (document.activeElement && document.activeElement.type === 'number') {
+      e.preventDefault();
+    }
+  }, { passive: false });
+</script>
 """, unsafe_allow_html=True)
 
 # ─── Game selector ────────────────────────────────────────────
@@ -155,13 +163,13 @@ the entropy of the independent numbers.
 if jeu == "crescendo":
     nb = st.number_input(
         "Number of grids per type",
-        min_value=1, max_value=20, value=5, step=1,
+        min_value=1, value=5, step=1,
         help="Generates N random grids + N pattern-biased grids",
     )
 else:
     nb = st.number_input(
         "Number of grids",
-        min_value=1, max_value=20, value=1, step=1,
+        min_value=1, value=1, step=1,
     )
 
 # ─── Generate button ──────────────────────────────────────────

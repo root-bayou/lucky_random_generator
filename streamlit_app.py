@@ -194,16 +194,16 @@ the entropy of the independent numbers.
 
 # ─── Options ──────────────────────────────────────────────────
 if jeu == "crescendo":
-    nb = st.number_input(
+    nb = int(st.number_input(
         "Number of grids per type",
         min_value=1, value=5, step=1,
         help="Generates N random grids + N pattern-biased grids",
-    )
+    ))
 else:
-    nb = st.number_input(
+    nb = int(st.number_input(
         "Number of grids",
         min_value=1, value=1, step=1,
-    )
+    ))
 
 # ─── Generate button ──────────────────────────────────────────
 BTN_ICONS = {"euromillions": "🌟", "eurodreams": "💫", "loto": "🍀", "crescendo": "🎲"}

@@ -77,7 +77,6 @@ st.markdown("""
     padding-top: 1rem !important;
     padding-bottom: 0.5rem !important;
   }
-  [data-testid="stVerticalBlock"] { gap: 0.4rem !important; }
   hr { margin: 0.3rem 0 !important; }
 
   /* ── Independent results scroll ── */

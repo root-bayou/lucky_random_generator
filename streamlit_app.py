@@ -74,7 +74,7 @@ st.markdown("""
   .grid-row  { font-family: monospace; font-size: 1rem; padding: 4px 0;
                border-bottom: 1px solid #2a2a2a; }
   .sep    { border-top: 2px solid #444; margin: 4px 0; }
-  h1      { font-size: 1.3rem !important; margin-bottom: 0 !important; }
+  h1      { font-size: 1.3rem !important; }
 
   /* ── Compact Streamlit layout ── */
   .block-container {
@@ -133,6 +133,10 @@ choice = st.radio(
     key="game_selector",
 )
 jeu = GAMES[choice]
+
+# ── DEBUG (remove after fix confirmed) ──────────────────────
+st.caption(f"🔍 DEBUG — selected: `{jeu}` | stats: `{'ok' if _STATS_OK else 'ERR'}`")
+# ────────────────────────────────────────────────────────────
 
 # Clear results when switching games
 if st.session_state.get("jeu_result") != jeu:

@@ -12,9 +12,17 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 import streamlit as st
 from generateur import Generateur
 from historique import Historique, ETC_DIR, FOLDERS_PER_GAME
-from stats_crescendo import scorer as score_crescendo
 
-APP_VERSION = "1.0.0"
+# stats module — fail-safe import (does not crash the app if unavailable)
+try:
+    from stats_crescendo import scorer as score_crescendo
+    _STATS_OK = True
+except Exception as _stats_err:
+    _STATS_OK = False
+    def score_crescendo(numeros, tirages):  # noqa: E302
+        return {"score": 50, "etoiles": 3, "chauds": 0, "detail": "stats unavailable"}
+
+APP_VERSION = "1.1.0"
 
 @st.cache_data
 def last_data_update(game: str) -> str:
@@ -336,7 +344,7 @@ st.markdown(f"""
   Every draw is pure chance — each combination has an identical probability of winning.<br>
   Gambling carries risks. Please play responsibly.<br>
   🇫🇷 Problem Gambling Helpline: <strong>09 74 75 13 13</strong> (France, free 24/7)<br>
-  <span style="opacity:0.45">v{APP_VERSION}</span>
+  <span style="opacity:0.45">v{APP_VERSION} · Python {sys.version[:6]} · stats:{'ok' if _STATS_OK else 'err'}</span>
 </div>
 """, unsafe_allow_html=True)
 

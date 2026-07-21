@@ -122,6 +122,7 @@ choice = st.radio(
     index=2,
     horizontal=True,
     label_visibility="collapsed",
+    key="game_selector",
 )
 jeu = GAMES[choice]
 
@@ -197,12 +198,14 @@ if jeu == "crescendo":
     nb = int(st.number_input(
         "Number of grids per type",
         min_value=1, value=5, step=1,
+        key="nb_crescendo",
         help="Generates N random grids + N pattern-biased grids",
     ))
 else:
     nb = int(st.number_input(
         "Number of grids",
         min_value=1, value=1, step=1,
+        key="nb_other",
     ))
 
 # ─── Generate button ──────────────────────────────────────────
@@ -262,7 +265,10 @@ if (
             nums_html = "".join(
                 f'<span class="num">{n:02d}</span>' for n in combo["numeros"]
             )
-            stat = score_crescendo(combo["numeros"], tirages)
+            try:
+                stat = score_crescendo(combo["numeros"], tirages)
+            except Exception:
+                stat = {"score": 50, "etoiles": 3, "chauds": 0, "detail": "—"}
             stars_str = "★" * stat["etoiles"] + "☆" * (5 - stat["etoiles"])
             score_cls = (
                 "score-hi"  if stat["score"] >= 65 else

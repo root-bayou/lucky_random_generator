@@ -64,9 +64,26 @@ st.markdown("""
   .warn   { color: #ef5350; font-weight: bold; }
   .sep    { border-top: 2px solid #444; margin: 8px 0; }
   h1      { font-size: 1.5rem !important; }
+
+  /* ── Lock page scroll ── */
+  html, body { overflow: hidden !important; height: 100% !important; }
+  [data-testid="stAppViewContainer"] { overflow: hidden !important; height: 100vh !important; }
+  [data-testid="stMain"] { overflow: hidden !important; }
+  .block-container { overflow: hidden !important; }
+
+  /* ── Independent results scroll ── */
+  .results-scroll {
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #444 transparent;
+  }
+  .results-scroll::-webkit-scrollbar { width: 6px; }
+  .results-scroll::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
 </style>
 <script>
-  // Prevent page scroll when using mouse wheel on number inputs
+  // Prevent page scroll when mouse wheel is on a number input
   document.addEventListener('wheel', function(e) {
     if (document.activeElement && document.activeElement.type === 'number') {
       e.preventDefault();
@@ -235,8 +252,7 @@ if (
                 f'{nums_html} &nbsp;{hist_html}'
                 f'</div>'
             )
-        st.markdown(html, unsafe_allow_html=True)
-        st.divider()
+        st.markdown(f'<div class="results-scroll">{html}</div>', unsafe_allow_html=True)
         st.caption(f"🎲 {_nb} random · 🔄 {_nb} pattern-biased · ✓ new · ⚠ already drawn in FDJ history")
 
     else:
@@ -264,8 +280,7 @@ if (
                 f'{nums_html}{comp_html} &nbsp; {hist_html}'
                 f'</div>'
             )
-        st.markdown(html, unsafe_allow_html=True)
-        st.divider()
+        st.markdown(f'<div class="results-scroll">{html}</div>', unsafe_allow_html=True)
         if jeu_r == "euromillions":
             st.caption("🔵 numbers · ✦ stars · ✓ new · ⚠ already drawn in FDJ history")
         elif jeu_r == "eurodreams":

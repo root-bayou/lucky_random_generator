@@ -69,11 +69,7 @@ st.markdown("""
   h1      { font-size: 1.3rem !important; margin-bottom: 0 !important; }
 
   /* ── Compact Streamlit layout ── */
-  html, body { overflow: hidden !important; height: 100% !important; }
-  [data-testid="stAppViewContainer"] { overflow: hidden !important; height: 100vh !important; }
-  [data-testid="stMain"] { overflow: hidden !important; }
   .block-container {
-    overflow: hidden !important;
     padding-top: 1rem !important;
     padding-bottom: 0.5rem !important;
   }

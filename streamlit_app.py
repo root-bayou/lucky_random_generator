@@ -129,7 +129,7 @@ choice = st.radio(
     list(GAMES.keys()),
     index=2,
     horizontal=True,
-    label_visibility="collapsed",
+    label_visibility="hidden",
     key="game_selector",
 )
 jeu = GAMES[choice]

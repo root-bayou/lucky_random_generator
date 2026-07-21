@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 import streamlit as st
 from generateur import Generateur
 from historique import Historique, ETC_DIR, FOLDERS_PER_GAME
+from stats_crescendo import scorer as score_crescendo
 
 APP_VERSION = "1.0.0"
 
@@ -62,18 +63,26 @@ st.markdown("""
   .mode-p { color: #81c784; font-size: 0.85rem; }
   .ok     { color: #66bb6a; font-weight: bold; }
   .warn   { color: #ef5350; font-weight: bold; }
-  .sep    { border-top: 2px solid #444; margin: 8px 0; }
-  h1      { font-size: 1.5rem !important; }
+  .grid-row  { font-family: monospace; font-size: 1rem; padding: 4px 0;
+               border-bottom: 1px solid #2a2a2a; }
+  .sep    { border-top: 2px solid #444; margin: 4px 0; }
+  h1      { font-size: 1.3rem !important; margin-bottom: 0 !important; }
 
-  /* ── Lock page scroll ── */
+  /* ── Compact Streamlit layout ── */
   html, body { overflow: hidden !important; height: 100% !important; }
   [data-testid="stAppViewContainer"] { overflow: hidden !important; height: 100vh !important; }
   [data-testid="stMain"] { overflow: hidden !important; }
-  .block-container { overflow: hidden !important; }
+  .block-container {
+    overflow: hidden !important;
+    padding-top: 1rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  [data-testid="stVerticalBlock"] { gap: 0.4rem !important; }
+  hr { margin: 0.3rem 0 !important; }
 
   /* ── Independent results scroll ── */
   .results-scroll {
-    max-height: 55vh;
+    max-height: 48vh;
     overflow-y: auto;
     padding-right: 6px;
     scrollbar-width: thin;
@@ -81,6 +90,18 @@ st.markdown("""
   }
   .results-scroll::-webkit-scrollbar { width: 6px; }
   .results-scroll::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+  /* ── Stat sub-row ── */
+  .stat-row {
+    font-size: 0.75rem;
+    color: #999;
+    padding-left: 8.8rem;
+    margin-top: 1px;
+    margin-bottom: 3px;
+  }
+  .score-hi  { color: #66bb6a; }
+  .score-mid { color: #ffd54f; }
+  .score-lo  { color: #ef5350; }
 </style>
 <script>
   // Prevent page scroll when mouse wheel is on a number input
@@ -227,6 +248,7 @@ if (
 ):
     resultats = st.session_state["resultats"]
     jeu_r     = st.session_state["jeu_result"]
+    tirages   = historique.tous_les_tirages() if jeu_r == "crescendo" else []
 
     html = ""
 
@@ -245,15 +267,31 @@ if (
             nums_html = "".join(
                 f'<span class="num">{n:02d}</span>' for n in combo["numeros"]
             )
+            stat = score_crescendo(combo["numeros"], tirages)
+            stars_str = "★" * stat["etoiles"] + "☆" * (5 - stat["etoiles"])
+            score_cls = (
+                "score-hi"  if stat["score"] >= 65 else
+                "score-mid" if stat["score"] >= 40 else
+                "score-lo"
+            )
+            stat_html = (
+                f'<div class="stat-row">'
+                f'<span class="{score_cls}">'
+                f'{stat["score"]}/100 {stars_str}'
+                f'</span>'
+                f' &nbsp;{stat["detail"]}'
+                f'</div>'
+            )
             html += (
                 f'<div class="grid-row">'
                 f'<span style="color:#888;width:1.5rem;display:inline-block">{idx}</span>'
                 f'<span class="{mode_cls}" style="width:7rem;display:inline-block">{mode_lbl}</span>'
                 f'{nums_html} &nbsp;{hist_html}'
                 f'</div>'
+                f'{stat_html}'
             )
         st.markdown(f'<div class="results-scroll">{html}</div>', unsafe_allow_html=True)
-        st.caption(f"🎲 {_nb} random · 🔄 {_nb} pattern-biased · ✓ new · ⚠ already drawn in FDJ history")
+        st.caption(f"🎲 {_nb} random · 🔄 {_nb} pattern-biased · ✓ new · ⚠ already drawn · score: vraisemblance historique")
 
     else:
         for idx, (combo, meta) in enumerate(resultats, 1):

@@ -32,7 +32,8 @@ id_rsa*
 *.code-workspace
 
 # ── Streamlit local config ─────────────────────────────────────
-.streamlit/
+# .streamlit/ contains config.toml needed by Streamlit Cloud — DO NOT ignore
+# .streamlit/secrets.toml  ← add this line if you ever use secrets
 
 # ── OS ─────────────────────────────────────────────────────────
 .DS_Store

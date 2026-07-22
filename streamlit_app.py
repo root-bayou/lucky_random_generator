@@ -113,11 +113,7 @@ st.markdown("""
   .score-mid { color: #ffd54f; }
   .score-lo  { color: #ef5350; }
 
-  /* ── Collapse hidden radio label space ── */
-  [data-testid="stRadio"] [data-testid="stWidgetLabel"] {
-    height: 0 !important; min-height: 0 !important;
-    overflow: hidden !important; margin: 0 !important; padding: 0 !important;
-  }
+
 </style>
 <script>
   // Prevent page scroll when mouse wheel is on a number input

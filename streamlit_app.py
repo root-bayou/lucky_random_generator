@@ -22,7 +22,7 @@ except Exception as _stats_err:
     def score_crescendo(numeros, tirages):  # noqa: E302
         return {"score": 50, "etoiles": 3, "chauds": 0, "detail": "stats unavailable"}
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 @st.cache_data
 def last_data_update(game: str) -> str:
@@ -51,29 +51,37 @@ st.set_page_config(
 # ─── CSS ──────────────────────────────────────────────────────
 st.markdown("""
 <style>
-  .grid-row  { font-family: monospace; font-size: 1.05rem; padding: 6px 0;
-               border-bottom: 1px solid #2a2a2a; }
-  .combo-row { font-family: monospace; font-size: 1.1rem; padding: 10px 0;
-               border-bottom: 1px solid #2a2a2a; }
-  .num    { display: inline-block; background: #1a4a8a; color: #fff;
-            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
-  .num-hot{ display: inline-block; background: #b35a00; color: #fff;
-            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
-  .num-hot{ display: inline-block; background: #b35a00; color: #fff;
-            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
-  .star   { display: inline-block; background: #6b5000; color: #ffd700;
-            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
-  .dream  { display: inline-block; background: #4a006b; color: #e0aaff;
-            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
-  .chance { display: inline-block; background: #7a0000; color: #fff;
-            border-radius: 4px; padding: 2px 7px; margin: 2px; font-weight: bold; }
-  .mode-r { color: #4fc3f7; font-size: 0.85rem; }
-  .mode-p { color: #81c784; font-size: 0.85rem; }
+  /* ── Lottery ball badges ── */
+  .num, .num-hot, .star, .dream, .chance {
+    display: inline-flex; justify-content: center; align-items: center;
+    border-radius: 50%; min-width: 2rem; height: 2rem;
+    padding: 0 0.25rem; margin: 2px;
+    font-weight: bold; font-size: 0.85rem; font-family: 'Courier New', monospace;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+  }
+  .num     { background: #1565c0; color: #fff; }
+  .num-hot { background: #b35a00; color: #fff; }
+  .star    { background: #7b5e00; color: #ffd700; }
+  .dream   { background: #4a006b; color: #e0aaff; }
+  .chance  { background: #7a0000; color: #ffcdd2; }
+
+  /* ── Row layout ── */
+  .grid-row {
+    font-family: monospace; font-size: 1rem;
+    padding: 6px 4px; border-bottom: 1px solid #2a2a2a;
+  }
+  .combo-row {
+    font-family: monospace; font-size: 1.05rem;
+    padding: 8px 4px; border-bottom: 1px solid #2a2a2a;
+  }
+  .idx    { color: #888; display: inline-block; min-width: 1.8rem; }
+  .mode-r { color: #4fc3f7; font-size: 0.82rem;
+            display: inline-block; min-width: 7rem; }
+  .mode-p { color: #81c784; font-size: 0.82rem;
+            display: inline-block; min-width: 7rem; }
   .ok     { color: #66bb6a; font-weight: bold; }
   .warn   { color: #ef5350; font-weight: bold; }
-  .grid-row  { font-family: monospace; font-size: 1rem; padding: 4px 0;
-               border-bottom: 1px solid #2a2a2a; }
-  .sep    { border-top: 2px solid #444; margin: 4px 0; }
+  .sep    { border-top: 2px solid #444; margin: 6px 0; }
   h1      { font-size: 1.3rem !important; }
 
   /* ── Compact Streamlit layout ── */
@@ -81,13 +89,14 @@ st.markdown("""
     padding-top: 1rem !important;
     padding-bottom: 0.5rem !important;
   }
-  hr { margin: 0.3rem 0 !important; }
 
-  /* ── Independent results scroll ── */
+  /* ── Scrollable results container ── */
   .results-scroll {
-    max-height: 48vh;
+    max-height: 52vh;
     overflow-y: auto;
-    padding-right: 6px;
+    padding: 4px 8px;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
     scrollbar-width: thin;
     scrollbar-color: #444 transparent;
   }
@@ -98,13 +107,17 @@ st.markdown("""
   .stat-row {
     font-size: 0.75rem;
     color: #999;
-    padding-left: 8.8rem;
-    margin-top: 1px;
-    margin-bottom: 3px;
+    padding: 1px 0 4px 1.8rem;
   }
-  .score-hi  { color: #66bb6a; }
+  .score-hi  { color: #66bb6a; font-weight: bold; }
   .score-mid { color: #ffd54f; }
   .score-lo  { color: #ef5350; }
+
+  /* ── Collapse hidden radio label space ── */
+  [data-testid="stRadio"] [data-testid="stWidgetLabel"] {
+    height: 0 !important; min-height: 0 !important;
+    overflow: hidden !important; margin: 0 !important; padding: 0 !important;
+  }
 </style>
 <script>
   // Prevent page scroll when mouse wheel is on a number input
@@ -133,10 +146,6 @@ choice = st.radio(
     key="game_selector",
 )
 jeu = GAMES[choice]
-
-# ── DEBUG (remove after fix confirmed) ──────────────────────
-st.caption(f"🔍 DEBUG — selected: `{jeu}` | stats: `{'ok' if _STATS_OK else 'ERR'}`")
-# ────────────────────────────────────────────────────────────
 
 # Clear results when switching games
 if st.session_state.get("jeu_result") != jeu:
@@ -297,8 +306,8 @@ if (
             )
             html += (
                 f'<div class="grid-row">'
-                f'<span style="color:#888;width:1.5rem;display:inline-block">{idx}</span>'
-                f'<span class="{mode_cls}" style="width:7rem;display:inline-block">{mode_lbl}</span>'
+                f'<span class="idx">{idx}</span>'
+                f'<span class="{mode_cls}">{mode_lbl}</span>'
                 f'{nums_html} &nbsp;{hist_html}'
                 f'</div>'
                 f'{stat_html}'
@@ -327,7 +336,7 @@ if (
             )
             html += (
                 f'<div class="combo-row">'
-                f'<span style="color:#888;margin-right:8px">#{idx}</span>'
+                f'<span class="idx">#{idx}</span>'
                 f'{nums_html}{comp_html} &nbsp; {hist_html}'
                 f'</div>'
             )

@@ -1,125 +1,111 @@
 """
 Statistical scoring of a Crescendo grid against historical draws.
-Score: 0–100, composed of 5 criteria.
+Score: 0–100 — measures how "typical" the grid is relative to past FDJ draws.
+
+Method: z-score distance on 4 distributional features.
+  A score near 50 = statistically average draw.
+  A score near 80+ = very close to historical norms on all criteria.
+  A score near 20  = atypical distribution.
 """
 import statistics
 
 
-def _precompute(tirages: list[dict]) -> dict:
-    """Precompute historical statistics once from the full draw list."""
+def _precompute(tirages: list) -> dict:
+    """Precompute historical distribution stats from the full draw list."""
     n = len(tirages)
-    if n == 0:
+    if n < 2:
         return None
 
-    # Individual number frequencies across all draws
-    freq = {i: 0 for i in range(1, 26)}
-    for t in tirages:
-        for num in t["numeros"]:
-            if 1 <= num <= 25:
-                freq[num] += 1
+    nums_lists = [t["numeros"] for t in tirages]
 
-    # "Hot" pool: numbers that appeared in the last 20 draws
-    hot_pool: set[int] = set()
-    for t in tirages[:20]:
+    low_counts  = [sum(1 for x in nums if x <= 12) for nums in nums_lists]
+    pair_counts = [sum(1 for x in nums if x % 2 == 0) for nums in nums_lists]
+    std_devs    = [statistics.stdev(nums) for nums in nums_lists if len(nums) > 1]
+    sums        = [sum(nums) for nums in nums_lists]
+
+    # Hot pool: numbers seen in the last 5 draws (for display info only)
+    hot_pool = set()
+    for t in tirages[:5]:
         hot_pool.update(t["numeros"])
 
-    # Average count of low numbers (≤ 12) per draw
-    avg_low = sum(
-        sum(1 for num in t["numeros"] if num <= 12)
-        for t in tirages
-    ) / n
-
-    # Average even count per draw
-    avg_pair = sum(
-        sum(1 for num in t["numeros"] if num % 2 == 0)
-        for t in tirages
-    ) / n
-
-    # Average standard deviation per draw (spread of numbers)
-    stds = [
-        statistics.stdev(t["numeros"])
-        for t in tirages
-        if len(t["numeros"]) > 1
-    ]
-    avg_std = sum(stds) / len(stds) if stds else 6.0
-
     return {
-        "freq":     freq,
-        "max_freq": max(freq.values()) or 1,
-        "hot_pool": hot_pool,
-        "avg_low":  avg_low,
-        "avg_pair": avg_pair,
-        "avg_std":  avg_std,
-        "n":        n,
+        "low_mean":  statistics.mean(low_counts),
+        "low_std":   statistics.stdev(low_counts),
+        "pair_mean": statistics.mean(pair_counts),
+        "pair_std":  statistics.stdev(pair_counts),
+        "std_mean":  statistics.mean(std_devs) if std_devs else 6.5,
+        "std_std":   statistics.stdev(std_devs) if len(std_devs) > 1 else 1.0,
+        "sum_mean":  statistics.mean(sums),
+        "sum_std":   statistics.stdev(sums),
+        "hot_pool":  hot_pool,
+        "n":         n,
     }
 
 
-def scorer(numeros: list[int], tirages: list[dict]) -> dict:
+def scorer(numeros: list, tirages: list) -> dict:
     """
-    Score a Crescendo grid (0–100) using 5 historical criteria.
+    Score a Crescendo grid (0–100) by measuring z-score distance
+    from historical distributional norms on 4 criteria (25 pts each):
+      1. Répartition basse/haute  (≤12 vs ≥13)
+      2. Parité pair/impair
+      3. Étalement  (standard deviation)
+      4. Somme totale
 
     Returns:
         score   : int 0-100
         etoiles : int 1-5
-        chauds  : int (hot numbers count out of 10)
-        detail  : str (short explanation)
+        chauds  : int (numbers seen in last 5 draws — display only)
+        detail  : str
     """
-    if not tirages:
+    if not tirages or len(tirages) < 2:
         return {"score": 50, "etoiles": 3, "chauds": 0, "detail": "no history"}
 
     s = _precompute(tirages)
+    if s is None:
+        return {"score": 50, "etoiles": 3, "chauds": 0, "detail": "no history"}
 
-    # ── 1. Fréquence individuelle (30 pts) ───────────────────────────────────
-    # Numbers that appear often historically → higher score
-    freq_sum = sum(s["freq"].get(n, 0) for n in numeros)
-    freq_score = int(30 * freq_sum / (10 * s["max_freq"]))
+    def z_to_pts(val, mean, std, max_pts=25):
+        """Full pts at z=0, decays linearly to 0 at z=1.25."""
+        z = abs(val - mean) / max(std, 0.01)
+        return max(0.0, max_pts * (1.0 - z * 0.8))
 
-    # ── 2. Chauds / Froids (25 pts) ─────────────────────────────────────────
-    # Numbers appearing in the last 20 draws score positively
-    chauds = sum(1 for n in numeros if n in s["hot_pool"])
-    # Historical expectation: ~7 hot numbers per random grid
-    chaud_score = int(25 * min(chauds, 8) / 8)
-
-    # ── 3. Répartition basse / haute (20 pts) ───────────────────────────────
-    # Compare our low-number count (≤ 12) to the historical average
-    our_low = sum(1 for n in numeros if n <= 12)
-    diff_low = abs(our_low - s["avg_low"])
-    repartition_score = max(0, int(20 * (1 - diff_low / 5)))
-
-    # ── 4. Parité pair / impair (15 pts) ────────────────────────────────────
+    our_low  = sum(1 for n in numeros if n <= 12)
     our_pair = sum(1 for n in numeros if n % 2 == 0)
-    diff_pair = abs(our_pair - s["avg_pair"])
-    parite_score = max(0, int(15 * (1 - diff_pair / 4)))
+    our_std  = statistics.stdev(numeros) if len(numeros) > 1 else 0.0
+    our_sum  = sum(numeros)
 
-    # ── 5. Écart-type / étalement (10 pts) ──────────────────────────────────
-    our_std = statistics.stdev(numeros) if len(numeros) > 1 else 0.0
-    diff_std = abs(our_std - s["avg_std"])
-    std_score = max(0, int(10 * (1 - diff_std / 4)))
+    pts_low  = z_to_pts(our_low,  s["low_mean"],  s["low_std"])
+    pts_pair = z_to_pts(our_pair, s["pair_mean"], s["pair_std"])
+    pts_std  = z_to_pts(our_std,  s["std_mean"],  s["std_std"])
+    pts_sum  = z_to_pts(our_sum,  s["sum_mean"],  s["sum_std"])
 
-    total = min(100, max(0,
-        freq_score + chaud_score + repartition_score + parite_score + std_score
-    ))
+    total = min(100, max(0, int(pts_low + pts_pair + pts_std + pts_sum)))
 
-    # Stars (1–5)
+    # Stars
     if   total >= 80: etoiles = 5
     elif total >= 65: etoiles = 4
     elif total >= 50: etoiles = 3
-    elif total >= 35: etoiles = 2
+    elif total >= 30: etoiles = 2
     else:             etoiles = 1
 
-    # Short explanation
+    # Hot numbers (display only — not used in score)
+    chauds = sum(1 for n in numeros if n in s["hot_pool"])
+
+    # Detail text
     parts = []
-    if   chauds >= 8: parts.append(f"{chauds}/10 hot 🔥")
-    elif chauds >= 6: parts.append(f"{chauds}/10 hot")
-    else:             parts.append(f"{chauds}/10 cold ❄️")
+    if   chauds >= 8: parts.append(f"{chauds}/10 🔥")
+    elif chauds >= 5: parts.append(f"{chauds}/10")
+    else:             parts.append(f"{chauds}/10 ❄️")
 
-    if diff_low <= 1:        parts.append("spread ok")
-    elif our_low > s["avg_low"] + 1: parts.append("low-heavy")
-    else:                    parts.append("high-heavy")
+    diff_low = our_low - s["low_mean"]
+    if   abs(diff_low) <= 0.8: parts.append("répart. ✓")
+    elif diff_low > 0:         parts.append("biais bas")
+    else:                      parts.append("biais haut")
 
-    if diff_pair <= 1:       parts.append("parity ok")
-    elif our_pair > s["avg_pair"] + 1: parts.append("even-heavy")
-    else:                    parts.append("odd-heavy")
+    diff_pair = our_pair - s["pair_mean"]
+    if   abs(diff_pair) <= 0.8: parts.append("parité ✓")
+    elif diff_pair > 0:         parts.append("pairs+")
+    else:                       parts.append("impairs+")
 
     return {
         "score":   total,

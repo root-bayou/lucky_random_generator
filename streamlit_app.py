@@ -210,6 +210,40 @@ the entropy of the independent numbers.
 > **This tool cannot predict lottery results.** Every official draw is independent.
 """)
 
+if jeu == "crescendo":
+    with st.expander("📊 How does score ranking work?", expanded=False):
+        st.markdown(f"""
+The score **(0 – 100)** measures how closely a grid matches the distributional patterns
+observed in the **{historique.nb_tirages()} official FDJ Crescendo draws** on record.
+It does **not** predict winning — every combination has an equal probability.
+
+**4 criteria · 25 pts each — all computed exclusively from observed draws**
+
+| Criterion | What is measured |
+|---|---|
+| 🔵 **Répartition** | Count of numbers ≤ 12 vs ≥ 13 — compared to the average observed across all draws |
+| ⚖️ **Parité** | Count of even vs odd numbers — compared to the observed average |
+| 📐 **Étalement** | Standard deviation of the 10 numbers — compared to the observed spread |
+| 📈 **Fréquence** | How close each number's *actual draw count* is to the historical average per number |
+
+Each criterion computes a **z-score** (distance from the observed mean in units of observed
+standard deviation). A grid at exactly the historical average on all 4 axes would score 100.
+A typical random grid scores **35 – 65**; unusual distributions score lower.
+
+| Score | Stars | Meaning |
+|---|---|---|
+| ≥ 80 | ★★★★★ | Extremely close to historical norms |
+| 65 – 79 | ★★★★☆ | Very typical |
+| 50 – 64 | ★★★☆☆ | Average |
+| 30 – 49 | ★★☆☆☆ | Slightly atypical |
+| < 30 | ★☆☆☆☆ | Unusual distribution |
+
+The **🔥 X/10** indicator shows how many of the 10 numbers appeared in the **last 5 draws**
+(display only — not included in the score).
+
+> Grids are sorted **best score first**. ⚠️ already-drawn grids are always pinned to the top.
+""")
+
 # ─── Options ──────────────────────────────────────────────────
 if jeu == "crescendo":
     nb = int(st.number_input(

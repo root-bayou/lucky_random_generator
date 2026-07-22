@@ -1,16 +1,23 @@
 """
-crescendo_predict.py
-====================
+crescendo_predict.py  v2
+========================
 Moteur de prediction Crescendo pour l'app Streamlit.
 
-Strategie (5 grilles / heure) :
-  1. Generer N candidats aleatoires ponderes (bayesien + greedy)
-  2. Selectionner LA MEILLEURE grille (score composite max)
-  3. Construire 4 VARIANTES : fixer 6-8 numeros de la meilleure,
-     tirer les restants de facon ponderee parmi 1-25 non fixes
-  4. Retourner les 5 grilles par heure pour le prochain samedi
+Strategie amelioree -- SELECT DIVERSE (5 grilles / heure) :
+  1. Generer 4 types de candidats :
+       - Bayesien     : poids freq horaire + prior (numeros chauds)
+       - Exploratoire : poids aplatis (numeros tiedis)
+       - Cold-biased  : poids inverses (numeros froids) -- NOUVEAU
+       - Greedy cooc  : exploite les paires frequentes
+  2. Scorer tous avec le composite (freq + stat + equilibre + hot)
+  3. Selectionner 5 via SELECT DIVERSE :
+       - Pool des 2000 meilleurs
+       - Greedy : adj = 0.65 * score + 0.35 * coverage_bonus
+       - Garantit couverture collective maximale de 1-25
 
-Total : 7 heures x 5 grilles = 35 grilles
+vs v1 (1 BEST + 4 VAR) :
+  - v1 : toutes les VAR fixent 6-8 num du BEST => blind spot systeme
+  - v2 : selection diversifiee + cold candidates => large couverture
 """
 
 import math, random, statistics
@@ -18,12 +25,14 @@ from collections import Counter
 from datetime import datetime
 
 HEURES       = ["13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"]
-N_RANDOM     = 25_000   # candidats random bayesiens par heure
-N_GREEDY     = 5_000    # candidats greedy co-occurrence par heure
+N_RANDOM     = 30_000
+N_EXPLORE    = 10_000
+N_COLD       = 10_000
+N_GREEDY     = 5_000
+POOL_DIV     = 2_000
 LAMBDA_DECAY = 0.05
 BETA_PRIOR   = 25
 
-# Table des gains officielle FDJ
 GAINS_TABLE = {
     10: ("JACKPOT", "JACKPOT"),
     9:  (500, 1000),
@@ -34,16 +43,13 @@ GAINS_TABLE = {
 
 
 def calc_gain(n_match: int, has_lettre: bool = False):
-    """Retourne le gain en EUR (int) ou 'JACKPOT' (str)."""
     if n_match == 10:
         return "JACKPOT"
     entry = GAINS_TABLE.get(n_match)
     if entry:
         return entry[1] if has_lettre else entry[0]
-    return 1 if has_lettre else 0   # 0-5 + lettre = remboursement
+    return 1 if has_lettre else 0
 
-
-# ── Utilitaires internes ───────────────────────────────────────────────────────
 
 def _parse_date(d):
     for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
@@ -181,68 +187,52 @@ def _composite(nums, poids, hot, analyse, sg):
     return 0.40 * fs + 0.30 * (ss / 100.0) + 0.15 * eq + 0.15 * hs
 
 
-def _build_variations(best_grid, poids, rng, n=4):
+def _select_diverse(candidats, n=5, pool_size=POOL_DIV):
     """
-    Construit n variantes de best_grid :
-      - Fixe aleatoirement 6-8 numeros de la grille source
-      - Tire les restants de facon ponderee parmi les 1-25 non fixes
+    Selectionne n grilles maximisant la couverture collective de 1-25.
+    Greedy : adj = 0.65 * score + 0.35 * coverage_bonus
+    La 1ere grille est la meilleure par score (coverage_bonus identique au debut).
     """
-    variations = []
-    seen       = {tuple(best_grid)}
-    attempts   = 0
-
-    while len(variations) < n and attempts < n * 300:
-        attempts += 1
-        n_fix  = rng.randint(6, 8)
-        fixed  = sorted(rng.sample(best_grid, n_fix))
-        pool   = [num for num in range(1, 26) if num not in fixed]
-        w      = [poids.get(num, 1 / 25) for num in pool]
-        n_need = 10 - n_fix
-
-        chosen, pool_c, w_c, ok = [], list(pool), list(w), True
-        for _ in range(n_need):
-            tot = sum(w_c)
-            if tot <= 0:
-                ok = False
+    vu, pool = set(), []
+    for sc, nums in sorted(candidats, key=lambda x: -x[0]):
+        key = tuple(nums)
+        if key not in vu:
+            vu.add(key)
+            pool.append((sc, list(nums)))
+            if len(pool) == pool_size:
                 break
-            r = rng.random() * tot
-            c = 0.0
-            for i, wi in enumerate(w_c):
-                c += wi
-                if c >= r or i == len(w_c) - 1:
-                    chosen.append(pool_c[i])
-                    pool_c.pop(i)
-                    w_c.pop(i)
-                    break
 
-        if ok and len(chosen) == n_need:
-            candidate = sorted(fixed + chosen)
-            key = tuple(candidate)
-            if key not in seen:
-                seen.add(key)
-                variations.append((n_fix, fixed, candidate))
+    selected, sel_keys = [], set()
+    coverage = {num: 0 for num in range(1, 26)}
 
-    return variations
+    for _ in range(n):
+        best_adj, best_grid = -1.0, None
+        for sc, nums in pool:
+            key = tuple(nums)
+            if key in sel_keys:
+                continue
+            cov_bonus = sum(1.0 / (coverage[num] + 1) for num in nums) / 10.0
+            adj = 0.65 * sc + 0.35 * cov_bonus
+            if adj > best_adj:
+                best_adj  = adj
+                best_grid = (sc, list(nums))
+        if best_grid:
+            selected.append(best_grid)
+            sel_keys.add(tuple(best_grid[1]))
+            for num in best_grid[1]:
+                coverage[num] += 1
 
+    return selected, coverage
 
-# ── API publique ───────────────────────────────────────────────────────────────
 
 def predict_crescendo(tirages: list) -> dict:
     """
     Predit 5 grilles pour chaque creneau horaire du prochain samedi.
 
-    Args:
-        tirages: liste de tirages historiques Crescendo
-                 (chaque dict: {"date": "DD/MM/YYYY", "heure": ..., "numeros": [...]})
-
     Returns:
         dict { heure: [ (label, nums, stat_score), ... ] }
-        - label  : "BEST" ou "VAR f=N" (N = nb numeros fixes)
-        - nums   : liste triee de 10 entiers 1-25
-        - stat_score : int 0-100 (vraisemblance historique)
-        5 entrees par heure, dans l'ordre BEST en premier.
+        label = "BEST" (1ere, meilleur score) ou "DIV N" (diverse)
     """
-    # Normaliser les heures du dataset
     normalized = []
     for t in tirages:
         tc = dict(t)
@@ -258,7 +248,7 @@ def predict_crescendo(tirages: list) -> dict:
         tirages_h = [t for t in normalized if t["heure"] == heure]
         n_h       = len(tirages_h)
 
-        # Poids bayesiens : frequence horaire (avec decroissance) + prior global
+        # Poids bayesiens
         freq_h_t = _freq_tempo(tirages_h)
         poids    = {}
         for n in range(1, 26):
@@ -269,14 +259,22 @@ def predict_crescendo(tirages: list) -> dict:
         tot   = sum(poids.values())
         poids = {k: v / tot for k, v in poids.items()}
 
+        # Poids exploratoires (aplatis)
+        explore = {n: (poids[n] + 1 / 25) / 2 for n in range(1, 26)}
+        tot_e   = sum(explore.values())
+        explore = {k: v / tot_e for k, v in explore.items()}
+
+        # Poids cold-biased (inverses)
+        cold  = {n: 1.0 / (poids[n] + 1e-6) for n in range(1, 26)}
+        tot_c = sum(cold.values())
+        cold  = {k: v / tot_c for k, v in cold.items()}
+
         cooc_h = _build_cooc(tirages_h)
 
-        # Hot numbers (5 derniers tirages de cette heure)
         hot = set()
         for t in sorted(tirages_h, key=lambda x: _parse_date(x["date"]))[-5:]:
             hot.update(t["numeros"])
 
-        # Distribution horaire pour le scoring d'equilibre
         if n_h > 1:
             lc2 = [sum(1 for x in t["numeros"] if x <= 12) for t in tirages_h]
             pc2 = [sum(1 for x in t["numeros"] if x % 2 == 0) for t in tirages_h]
@@ -298,25 +296,30 @@ def predict_crescendo(tirages: list) -> dict:
         def scorer(nums):
             return _composite(nums, poids, hot, analyse, sg)
 
-        # Generation des candidats
         candidats = []
+
         for _ in range(N_RANDOM):
             nums = _gen_pondere(dict(poids), rng)
             candidats.append((scorer(nums), nums))
+
+        for _ in range(N_EXPLORE):
+            nums = _gen_pondere(dict(explore), rng)
+            candidats.append((scorer(nums), nums))
+
+        for _ in range(N_COLD):
+            nums = _gen_pondere(dict(cold), rng)
+            candidats.append((scorer(nums), nums))
+
         for _ in range(N_GREEDY):
             nums = _gen_greedy(poids, cooc_h, rng, rng.uniform(0.15, 0.7))
             candidats.append((scorer(nums), nums))
 
-        # Meilleure grille
-        best_score, best_nums = max(candidats, key=lambda x: x[0])
+        selected, _ = _select_diverse(candidats, n=5)
 
-        # 4 variantes
-        variations = _build_variations(best_nums, poids, rng, n=4)
-
-        # Construire la liste finale : BEST + 4 VAR
-        grilles = [("BEST", best_nums, _score_stat(best_nums, sg))]
-        for n_fix, _fixed, var_nums in variations:
-            grilles.append((f"VAR f={n_fix}", var_nums, _score_stat(var_nums, sg)))
+        grilles = []
+        for i, (sc, nums) in enumerate(selected):
+            label = "BEST" if i == 0 else f"DIV {i + 1}"
+            grilles.append((label, nums, _score_stat(nums, sg)))
 
         result[heure] = grilles
 

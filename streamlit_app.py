@@ -444,9 +444,9 @@ if jeu == "crescendo" and _PREDICT_OK:
         _pred_date   = st.session_state.get("crescendo_predict_date", "—")
 
         st.caption(
-            f"Generated for **{_pred_date}** · 🏆 BEST = top-scoring grid · "
-            f"🔧 VAR = variant (6–8 fixed numbers + new draws) · "
-            f"{historique.nb_tirages()} draws used · Score = historical likelihood (0–100)"
+            f"Generated for **{_pred_date}** · "
+            f"🏆 BEST = top-scoring grid · 🌐 DIV = diversity-selected (covers cold numbers) · "
+            f"{historique.nb_tirages()} draws · Score = historical likelihood (0–100)"
         )
 
         _tabs = st.tabs([f"⏰ {h}" for h in CRDO_HEURES])
@@ -457,7 +457,7 @@ if jeu == "crescendo" and _PREDICT_OK:
                 for _i, (_label, _nums, _ss) in enumerate(_grilles, 1):
                     _is_best   = _label == "BEST"
                     _badge_cls = "badge-best" if _is_best else "badge-var"
-                    _badge_txt = "🏆 BEST" if _is_best else f"🔧 {_label}"
+                    _badge_txt = "🏆 BEST" if _is_best else f"🌐 {_label}"
                     _nums_html = "".join(f'<span class="num">{n:02d}</span>' for n in _nums)
                     _sc_cls    = "score-hi" if _ss >= 65 else "score-mid" if _ss >= 40 else "score-lo"
                     _html += (

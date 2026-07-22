@@ -250,10 +250,10 @@ It does **not** predict winning — every combination has an equal probability.
 
 | Criterion | What is measured |
 |---|---|
-| 🔵 **Répartition** | Count of numbers ≤ 12 vs ≥ 13 — compared to the average observed across all draws |
-| ⚖️ **Parité** | Count of even vs odd numbers — compared to the observed average |
-| 📐 **Étalement** | Standard deviation of the 10 numbers — compared to the observed spread |
-| 📈 **Fréquence** | How close each number's *actual draw count* is to the historical average per number |
+| 🔵 **Distribution** | Count of numbers ≤ 12 vs ≥ 13 — compared to the average observed across all draws |
+| ⚖️ **Parity** | Count of even vs odd numbers — compared to the observed average |
+| 📐 **Spread** | Standard deviation of the 10 numbers — compared to the observed spread |
+| 📈 **Frequency** | How close each number's *actual draw count* is to the historical average per number |
 
 Each criterion computes a **z-score** (distance from the observed mean in units of observed
 standard deviation). A grid at exactly the historical average on all 4 axes would score 100.
@@ -421,19 +421,19 @@ if (
 # ─── GET MY CHANCE — Crescendo prediction ─────────────────────
 if jeu == "crescendo" and _PREDICT_OK:
     st.divider()
-    st.subheader("🎯 GET MY CHANCE — Prédiction Samedi")
+    st.subheader("🎯 GET MY CHANCE — Saturday Prediction")
 
     _next_sat     = next_saturday()
     _next_sat_str = _next_sat.strftime("%d/%m/%Y")
 
     st.info(
-        f"📅 Prochain samedi **{_next_sat_str}** · 7 créneaux (13h–19h) · "
-        f"5 grilles/heure · Mise totale : **35 EUR**",
+        f"📅 Next Saturday **{_next_sat_str}** · 7 draws (1pm–7pm) · "
+        f"5 grids/draw · Total stake: **€35**",
         icon="🎰",
     )
 
     if st.button("🍀  GET MY CHANCE", use_container_width=True, type="primary", key="btn_predict"):
-        with st.spinner("Calcul des grilles optimales… (30–60 sec)"):
+        with st.spinner("Computing optimal grids… (30–60 sec)"):
             _tirages_all = historique.tous_les_tirages()
             _predictions = predict_crescendo(_tirages_all)
         st.session_state["crescendo_predict"]      = _predictions
@@ -444,9 +444,9 @@ if jeu == "crescendo" and _PREDICT_OK:
         _pred_date   = st.session_state.get("crescendo_predict_date", "—")
 
         st.caption(
-            f"Généré pour le **{_pred_date}** · 🏆 BEST = meilleure grille · "
-            f"🔧 VAR = variante (6–8 numéros fixes + nouveaux) · "
-            f"{historique.nb_tirages()} tirages · Score = vraisemblance historique (0–100)"
+            f"Generated for **{_pred_date}** · 🏆 BEST = top-scoring grid · "
+            f"🔧 VAR = variant (6–8 fixed numbers + new draws) · "
+            f"{historique.nb_tirages()} draws used · Score = historical likelihood (0–100)"
         )
 
         _tabs = st.tabs([f"⏰ {h}" for h in CRDO_HEURES])
@@ -470,19 +470,19 @@ if jeu == "crescendo" and _PREDICT_OK:
                     )
                 st.markdown(f'<div class="results-scroll">{_html}</div>', unsafe_allow_html=True)
 
-        with st.expander("💶 Table des gains Crescendo", expanded=False):
+        with st.expander("💶 Crescendo Prize Table", expanded=False):
             st.markdown("""
-| Numéros corrects | Sans lettre | Avec lettre |
+| Correct numbers | Without letter | With letter |
 |:---:|---:|---:|
-| **10** (Jackpot) | ≥ 100 000 € | ≥ 100 000 € |
-| **9** | 500 € | 1 000 € |
-| **8** | 50 € | 100 € |
-| **7** | 7 € | 14 € |
-| **6** | 1 € | 2 € |
-| 0–5 + lettre | — | 1 € *(remboursement)* |
+| **10** (Jackpot) | ≥ €100,000 | ≥ €100,000 |
+| **9** | €500 | €1,000 |
+| **8** | €50 | €100 |
+| **7** | €7 | €14 |
+| **6** | €1 | €2 |
+| 0–5 + letter | — | €1 *(refund)* |
 
-*La lettre (S/A/M/E/D/I) est attribuée aléatoirement sur votre ticket à l'achat.*
-*Jackpot : 100 000 € min à 13h, +100 000 € à chaque heure sans gagnant, jusqu'à 700 000 € à 19h.*
+*The letter (S/A/M/E/D/I) is assigned randomly on your ticket at purchase.*
+*Jackpot: €100,000 min at 1pm draw, +€100,000 each hour without a winner, up to €700,000 at 7pm.*
 """)
 
 # ─── Disclaimer ───────────────────────────────────────────────

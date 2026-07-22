@@ -5,7 +5,7 @@ Browser access: PC, tablet, smartphone
 
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
@@ -22,7 +22,24 @@ except Exception as _stats_err:
     def score_crescendo(numeros, tirages):  # noqa: E302
         return {"score": 50, "etoiles": 3, "chauds": 0, "detail": "stats unavailable"}
 
+# prediction engine — fail-safe import
+try:
+    from crescendo_predict import predict_crescendo, HEURES as CRDO_HEURES
+    _PREDICT_OK = True
+except Exception as _pe:
+    _PREDICT_OK = False
+    CRDO_HEURES = ["13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"]
+
 APP_VERSION = "1.2.0"
+
+def next_saturday(d: date | None = None) -> date:
+    """Return the date of the next Saturday (or today if already Saturday)."""
+    d = d or date.today()
+    days_ahead = 5 - d.weekday()   # Saturday = weekday 5
+    if days_ahead < 0:
+        days_ahead += 7
+    return d + timedelta(days=days_ahead)
+
 
 @st.cache_data
 def last_data_update(game: str) -> str:
@@ -81,6 +98,18 @@ st.markdown("""
             display: inline-block; min-width: 7rem; }
   .ok     { color: #66bb6a; font-weight: bold; }
   .warn   { color: #ef5350; font-weight: bold; }
+
+  /* ── GET MY CHANCE badges ── */
+  .badge-best {
+    display: inline-block; background: #1a4d2e; color: #a5d6a7;
+    border-radius: 4px; padding: 1px 8px; font-size: 0.78rem;
+    font-weight: bold; min-width: 6.5rem; margin-right: 6px;
+  }
+  .badge-var {
+    display: inline-block; background: #1c2340; color: #9fa8da;
+    border-radius: 4px; padding: 1px 8px; font-size: 0.78rem;
+    min-width: 6.5rem; margin-right: 6px;
+  }
   .sep    { border-top: 2px solid #444; margin: 6px 0; }
   h1      { font-size: 1.3rem !important; }
 
@@ -388,6 +417,73 @@ if (
             st.caption("🔵 numbers · 💫 dream number · ✓ new · ⚠ already drawn in FDJ history")
         else:
             st.caption("🔵 numbers · 🍀 lucky number · ✓ new · ⚠ already drawn in FDJ history")
+
+# ─── GET MY CHANCE — Crescendo prediction ─────────────────────
+if jeu == "crescendo" and _PREDICT_OK:
+    st.divider()
+    st.subheader("🎯 GET MY CHANCE — Prédiction Samedi")
+
+    _next_sat     = next_saturday()
+    _next_sat_str = _next_sat.strftime("%d/%m/%Y")
+
+    st.info(
+        f"📅 Prochain samedi **{_next_sat_str}** · 7 créneaux (13h–19h) · "
+        f"5 grilles/heure · Mise totale : **35 EUR**",
+        icon="🎰",
+    )
+
+    if st.button("🍀  GET MY CHANCE", use_container_width=True, type="primary", key="btn_predict"):
+        with st.spinner("Calcul des grilles optimales… (30–60 sec)"):
+            _tirages_all = historique.tous_les_tirages()
+            _predictions = predict_crescendo(_tirages_all)
+        st.session_state["crescendo_predict"]      = _predictions
+        st.session_state["crescendo_predict_date"] = _next_sat_str
+
+    if "crescendo_predict" in st.session_state:
+        _predictions = st.session_state["crescendo_predict"]
+        _pred_date   = st.session_state.get("crescendo_predict_date", "—")
+
+        st.caption(
+            f"Généré pour le **{_pred_date}** · 🏆 BEST = meilleure grille · "
+            f"🔧 VAR = variante (6–8 numéros fixes + nouveaux) · "
+            f"{historique.nb_tirages()} tirages · Score = vraisemblance historique (0–100)"
+        )
+
+        _tabs = st.tabs([f"⏰ {h}" for h in CRDO_HEURES])
+        for _tab, _heure in zip(_tabs, CRDO_HEURES):
+            with _tab:
+                _grilles  = _predictions.get(_heure, [])
+                _html     = ""
+                for _i, (_label, _nums, _ss) in enumerate(_grilles, 1):
+                    _is_best   = _label == "BEST"
+                    _badge_cls = "badge-best" if _is_best else "badge-var"
+                    _badge_txt = "🏆 BEST" if _is_best else f"🔧 {_label}"
+                    _nums_html = "".join(f'<span class="num">{n:02d}</span>' for n in _nums)
+                    _sc_cls    = "score-hi" if _ss >= 65 else "score-mid" if _ss >= 40 else "score-lo"
+                    _html += (
+                        f'<div class="grid-row">'
+                        f'<span class="idx">{_i}</span>'
+                        f'<span class="{_badge_cls}">{_badge_txt}</span>'
+                        f'{_nums_html}'
+                        f' &nbsp;<span class="{_sc_cls}">{_ss}/100</span>'
+                        f'</div>'
+                    )
+                st.markdown(f'<div class="results-scroll">{_html}</div>', unsafe_allow_html=True)
+
+        with st.expander("💶 Table des gains Crescendo", expanded=False):
+            st.markdown("""
+| Numéros corrects | Sans lettre | Avec lettre |
+|:---:|---:|---:|
+| **10** (Jackpot) | ≥ 100 000 € | ≥ 100 000 € |
+| **9** | 500 € | 1 000 € |
+| **8** | 50 € | 100 € |
+| **7** | 7 € | 14 € |
+| **6** | 1 € | 2 € |
+| 0–5 + lettre | — | 1 € *(remboursement)* |
+
+*La lettre (S/A/M/E/D/I) est attribuée aléatoirement sur votre ticket à l'achat.*
+*Jackpot : 100 000 € min à 13h, +100 000 € à chaque heure sans gagnant, jusqu'à 700 000 € à 19h.*
+""")
 
 # ─── Disclaimer ───────────────────────────────────────────────
 st.divider()

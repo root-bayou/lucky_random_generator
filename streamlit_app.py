@@ -269,23 +269,36 @@ if (
 
     if jeu_r == "crescendo":
         _nb = st.session_state.get("crescendo_nb", nb)
-        for idx, (combo, meta) in enumerate(resultats, 1):
-            if idx == _nb + 1:
+
+        # Compute stats for every grid, then sort:
+        # already-drawn first (rare highlight), then by score descending
+        enriched = []
+        for combo, meta in resultats:
+            try:
+                stat = score_crescendo(combo["numeros"], tirages)
+            except Exception:
+                stat = {"score": 50, "etoiles": 3, "chauds": 0, "detail": "—"}
+            enriched.append((combo, meta, stat))
+        enriched.sort(key=lambda x: (0 if x[1].get("deja_sortie") else 1, -x[2]["score"]))
+
+        prev_drawn = None
+        for idx, (combo, meta, stat) in enumerate(enriched, 1):
+            is_drawn = bool(meta.get("deja_sortie"))
+            # separator between already-drawn group and new group
+            if prev_drawn is not None and prev_drawn != is_drawn:
                 html += '<div class="sep"></div>'
-            mode_lbl = "🎲 Random"  if meta.get("mode") == "random" else "🔄 Pattern"
-            mode_cls = "mode-r"     if meta.get("mode") == "random" else "mode-p"
+            prev_drawn = is_drawn
+
+            mode_lbl = "🎲 Random" if meta.get("mode") == "random" else "🔄 Pattern"
+            mode_cls = "mode-r"    if meta.get("mode") == "random" else "mode-p"
             hist_html = (
                 '<span class="warn">⚠ Already drawn</span>'
-                if meta.get("deja_sortie") else
+                if is_drawn else
                 '<span class="ok">✓ New</span>'
             )
             nums_html = "".join(
                 f'<span class="num">{n:02d}</span>' for n in combo["numeros"]
             )
-            try:
-                stat = score_crescendo(combo["numeros"], tirages)
-            except Exception:
-                stat = {"score": 50, "etoiles": 3, "chauds": 0, "detail": "—"}
             stars_str = "★" * stat["etoiles"] + "☆" * (5 - stat["etoiles"])
             score_cls = (
                 "score-hi"  if stat["score"] >= 65 else
@@ -294,9 +307,7 @@ if (
             )
             stat_html = (
                 f'<div class="stat-row">'
-                f'<span class="{score_cls}">'
-                f'{stat["score"]}/100 {stars_str}'
-                f'</span>'
+                f'<span class="{score_cls}">{stat["score"]}/100 {stars_str}</span>'
                 f' &nbsp;{stat["detail"]}'
                 f'</div>'
             )

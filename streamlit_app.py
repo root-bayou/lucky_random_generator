@@ -333,21 +333,12 @@ if (
     if jeu_r == "crescendo":
         _nb = st.session_state.get("crescendo_nb", nb)
 
-        # Compute stats for every grid, then sort:
-        # already-drawn first (rare highlight), then by score descending
-        enriched = []
-        for combo, meta in resultats:
-            try:
-                stat = score_crescendo(combo["numeros"], tirages)
-            except Exception:
-                stat = {"score": 50, "etoiles": 3, "chauds": 0, "detail": "—"}
-            enriched.append((combo, meta, stat))
-        enriched.sort(key=lambda x: (0 if x[1].get("deja_sortie") else 1, -x[2]["score"]))
+        # Sort: already-drawn first, preserve generation order otherwise
+        enriched = sorted(resultats, key=lambda x: 0 if x[1].get("deja_sortie") else 1)
 
         prev_drawn = None
-        for idx, (combo, meta, stat) in enumerate(enriched, 1):
+        for idx, (combo, meta) in enumerate(enriched, 1):
             is_drawn = bool(meta.get("deja_sortie"))
-            # separator between already-drawn group and new group
             if prev_drawn is not None and prev_drawn != is_drawn:
                 html += '<div class="sep"></div>'
             prev_drawn = is_drawn
@@ -362,28 +353,15 @@ if (
             nums_html = "".join(
                 f'<span class="num">{n:02d}</span>' for n in combo["numeros"]
             )
-            stars_str = "★" * stat["etoiles"] + "☆" * (5 - stat["etoiles"])
-            score_cls = (
-                "score-hi"  if stat["score"] >= 65 else
-                "score-mid" if stat["score"] >= 40 else
-                "score-lo"
-            )
-            stat_html = (
-                f'<div class="stat-row">'
-                f'<span class="{score_cls}">{stat["score"]}/100 {stars_str}</span>'
-                f' &nbsp;{stat["detail"]}'
-                f'</div>'
-            )
             html += (
                 f'<div class="grid-row">'
                 f'<span class="idx">{idx}</span>'
                 f'<span class="{mode_cls}">{mode_lbl}</span>'
                 f'{nums_html} &nbsp;{hist_html}'
                 f'</div>'
-                f'{stat_html}'
             )
         st.markdown(f'<div class="results-scroll">{html}</div>', unsafe_allow_html=True)
-        st.caption(f"🎲 {_nb} random · 🔄 {_nb} pattern-biased · ✓ new · ⚠ already drawn · score: vraisemblance historique")
+        st.caption(f"🎲 {_nb} random · 🔄 {_nb} pattern-biased · ✓ new · ⚠ already drawn")
 
     else:
         for idx, (combo, meta) in enumerate(resultats, 1):

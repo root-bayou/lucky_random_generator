@@ -300,8 +300,14 @@ else:
 # Lock the button if and only if the last result contained an already-drawn grid
 _btn_locked = jeu == "crescendo" and st.session_state.get("crdo_has_drawn", False)
 
+if _btn_locked:
+    st.error(
+        "🛑 **STOP — A grid was already drawn!**  Scroll down to see which one.",
+        icon="🛑",
+    )
+
 if st.button(_btn_label, use_container_width=True, type="primary", disabled=_btn_locked):
-    st.session_state["crdo_clicks"]     = st.session_state.get("crdo_clicks", 0) + 1
+    st.session_state["crdo_clicks"] = st.session_state.get("crdo_clicks", 0) + 1
     gen = Generateur(jeu, historique)
 
     if jeu == "crescendo":
@@ -316,6 +322,8 @@ if st.button(_btn_label, use_container_width=True, type="primary", disabled=_btn
             resultats.append((combo, meta))
         st.session_state["crescendo_nb"]   = nb
         st.session_state["crdo_has_drawn"] = any(m.get("deja_sortie") for _, m in resultats)
+        if st.session_state["crdo_has_drawn"]:
+            st.toast("🛑 Already-drawn grid found! Button locked.", icon="🛑")
     else:
         resultats = []
         for _ in range(nb):

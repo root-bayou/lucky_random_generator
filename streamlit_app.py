@@ -333,15 +333,26 @@ if (
     if jeu_r == "crescendo":
         _nb = st.session_state.get("crescendo_nb", nb)
 
-        # Sort: already-drawn first, preserve generation order otherwise
-        enriched = sorted(resultats, key=lambda x: 0 if x[1].get("deja_sortie") else 1)
+        # Popup warning for each already-drawn grid (above the grid list)
+        for _idx, (_combo, _meta) in enumerate(resultats, 1):
+            if _meta.get("deja_sortie"):
+                _target = tuple(sorted(_combo["numeros"]))
+                _draw = next(
+                    (t for t in tirages if tuple(sorted(t["numeros"])) == _target),
+                    None,
+                )
+                if _draw:
+                    st.warning(
+                        f"**Grid #{_idx}** already drawn — appeared on "
+                        f"**{_draw['date']}** at **{_draw['heure']}**",
+                        icon="⚠️",
+                    )
+                else:
+                    st.warning(f"**Grid #{_idx}** already drawn!", icon="⚠️")
 
-        prev_drawn = None
-        for idx, (combo, meta) in enumerate(enriched, 1):
+        # Display in generation order (no sort)
+        for idx, (combo, meta) in enumerate(resultats, 1):
             is_drawn = bool(meta.get("deja_sortie"))
-            if prev_drawn is not None and prev_drawn != is_drawn:
-                html += '<div class="sep"></div>'
-            prev_drawn = is_drawn
 
             mode_lbl = "🎲 Random" if meta.get("mode") == "random" else "🔄 Pattern"
             mode_cls = "mode-r"    if meta.get("mode") == "random" else "mode-p"

@@ -296,7 +296,11 @@ if jeu == "crescendo":
 else:
     _btn_label = f"{_icon}  GENERATE {nb} GRID{'S' if nb > 1 else ''}"
 
-if st.button(_btn_label, use_container_width=True, type="primary"):
+# Lock the button when the last Crescendo result contained an already-drawn grid
+_btn_locked = jeu == "crescendo" and st.session_state.get("crdo_has_drawn", False)
+
+if st.button(_btn_label, use_container_width=True, type="primary", disabled=_btn_locked):
+    st.session_state["crdo_clicks"] = st.session_state.get("crdo_clicks", 0) + 1
     gen = Generateur(jeu, historique)
 
     if jeu == "crescendo":
@@ -310,6 +314,7 @@ if st.button(_btn_label, use_container_width=True, type="primary"):
             combo, meta = gen.generer_pseudo(refs)
             resultats.append((combo, meta))
         st.session_state["crescendo_nb"] = nb
+        st.session_state["crdo_has_drawn"] = any(m.get("deja_sortie") for _, m in resultats)
     else:
         resultats = []
         for _ in range(nb):
@@ -318,6 +323,11 @@ if st.button(_btn_label, use_container_width=True, type="primary"):
 
     st.session_state["resultats"]  = resultats
     st.session_state["jeu_result"] = jeu
+
+if _btn_locked:
+    if st.button("Unlock — generate again", use_container_width=True, type="secondary"):
+        st.session_state["crdo_has_drawn"] = False
+        st.rerun()
 
 # ─── Results display ──────────────────────────────────────────
 if (
@@ -372,7 +382,11 @@ if (
                 f'</div>'
             )
         st.markdown(f'<div class="results-scroll">{html}</div>', unsafe_allow_html=True)
-        st.caption(f"🎲 {_nb} random · 🔄 {_nb} pattern-biased · ✓ new · ⚠ already drawn")
+        _clicks = st.session_state.get("crdo_clicks", 1)
+        st.caption(
+            f"🎲 {_nb} random · 🔄 {_nb} pattern-biased · ✓ new · ⚠ already drawn"
+            f" · 🖱 {_clicks} click{'s' if _clicks > 1 else ''}"
+        )
 
     else:
         for idx, (combo, meta) in enumerate(resultats, 1):

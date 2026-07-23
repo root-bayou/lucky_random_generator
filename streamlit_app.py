@@ -297,8 +297,12 @@ if jeu == "crescendo":
 else:
     _btn_label = f"{_icon}  GENERATE {nb} GRID{'S' if nb > 1 else ''}"
 
-# Lock the button if and only if the last result contained an already-drawn grid
-_btn_locked = jeu == "crescendo" and st.session_state.get("crdo_has_drawn", False)
+# Lock the button if and only if the CURRENT Crescendo results contain an already-drawn grid
+_btn_locked = (
+    jeu == "crescendo"
+    and st.session_state.get("jeu_result") == "crescendo"
+    and st.session_state.get("crdo_has_drawn", False)
+)
 
 if _btn_locked:
     st.error(

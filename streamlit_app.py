@@ -426,18 +426,26 @@ if jeu == "crescendo" and _PREDICT_OK:
     _next_sat     = next_saturday()
     _next_sat_str = _next_sat.strftime("%d/%m/%Y")
 
+    _n_grilles = int(st.number_input(
+        "Grids per draw",
+        min_value=1, max_value=10, value=5, step=1,
+        key="nb_predict",
+        help="Number of optimised grids per hourly draw. Total stake = 7 × N × €1",
+    ))
+    _stake = 7 * _n_grilles
     st.info(
         f"📅 Next Saturday **{_next_sat_str}** · 7 draws (1pm–7pm) · "
-        f"5 grids/draw · Total stake: **€35**",
+        f"{_n_grilles} grid{'s' if _n_grilles > 1 else ''}/draw · Total stake: **€{_stake}**",
         icon="🎰",
     )
 
     if st.button("🍀  GET MY CHANCE", use_container_width=True, type="primary", key="btn_predict"):
         with st.spinner("Computing optimal grids… (30–60 sec)"):
             _tirages_all = historique.tous_les_tirages()
-            _predictions = predict_crescendo(_tirages_all)
+            _predictions = predict_crescendo(_tirages_all, n_grilles=_n_grilles)
         st.session_state["crescendo_predict"]      = _predictions
         st.session_state["crescendo_predict_date"] = _next_sat_str
+        st.session_state["crescendo_predict_n"]    = _n_grilles
 
     if "crescendo_predict" in st.session_state:
         _predictions = st.session_state["crescendo_predict"]

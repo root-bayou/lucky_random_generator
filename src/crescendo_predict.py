@@ -225,9 +225,9 @@ def _select_diverse(candidats, n=5, pool_size=POOL_DIV):
     return selected, coverage
 
 
-def predict_crescendo(tirages: list) -> dict:
+def predict_crescendo(tirages: list, n_grilles: int = 5) -> dict:
     """
-    Predit 5 grilles pour chaque creneau horaire du prochain samedi.
+    Predit n_grilles grilles pour chaque creneau horaire du prochain samedi.
 
     Returns:
         dict { heure: [ (label, nums, stat_score), ... ] }
@@ -314,7 +314,7 @@ def predict_crescendo(tirages: list) -> dict:
             nums = _gen_greedy(poids, cooc_h, rng, rng.uniform(0.15, 0.7))
             candidats.append((scorer(nums), nums))
 
-        selected, _ = _select_diverse(candidats, n=5)
+        selected, _ = _select_diverse(candidats, n=n_grilles)
 
         grilles = []
         for i, (sc, nums) in enumerate(selected):

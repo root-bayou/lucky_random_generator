@@ -338,8 +338,8 @@ else:
                 combo, meta = gen.generer()
                 resultats.append((combo, meta))
 
-    st.session_state["resultats"]  = resultats
-    st.session_state["jeu_result"] = jeu
+        st.session_state["resultats"]  = resultats
+        st.session_state["jeu_result"] = jeu
 
 # ─── Results display ──────────────────────────────────────────
 if (

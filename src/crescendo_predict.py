@@ -228,6 +228,7 @@ def _select_diverse(candidats, n=5, pool_size=POOL_DIV):
 def predict_crescendo(tirages: list, n_grilles: int = 5) -> dict:
     """
     Predit n_grilles grilles pour chaque creneau horaire du prochain samedi.
+    Utilise tous les tirages (pas de filtre par heure) — signal plus robuste.
 
     Returns:
         dict { heure: [ (label, nums, stat_score), ... ] }
@@ -239,63 +240,48 @@ def predict_crescendo(tirages: list, n_grilles: int = 5) -> dict:
         tc["heure"] = _norm_heure(tc.get("heure", ""))
         normalized.append(tc)
 
-    sg           = _precompute_global(normalized)
-    freq_g_tempo = _freq_tempo(normalized)
-    rng          = random.SystemRandom()
-    result       = {}
+    sg    = _precompute_global(normalized)
+    rng   = random.SystemRandom()
+    result = {}
+
+    # Calcul global (tous tirages) — fait une seule fois
+    n_h      = len(normalized)
+    freq_g   = _freq_tempo(normalized)
+    poids    = {n: freq_g.get(n, 1 / 25) for n in range(1, 26)}
+    tot      = sum(poids.values())
+    poids    = {k: v / tot for k, v in poids.items()}
+
+    explore  = {n: (poids[n] + 1 / 25) / 2 for n in range(1, 26)}
+    tot_e    = sum(explore.values())
+    explore  = {k: v / tot_e for k, v in explore.items()}
+
+    cold     = {n: 1.0 / (poids[n] + 1e-6) for n in range(1, 26)}
+    tot_c    = sum(cold.values())
+    cold     = {k: v / tot_c for k, v in cold.items()}
+
+    cooc_g   = _build_cooc(normalized)
+
+    hot      = set()
+    for t in sorted(normalized, key=lambda x: _parse_date(x["date"]))[-5:]:
+        hot.update(t["numeros"])
+
+    lc2 = [sum(1 for x in t["numeros"] if x <= 12) for t in normalized]
+    pc2 = [sum(1 for x in t["numeros"] if x % 2 == 0) for t in normalized]
+    sd2 = [statistics.stdev(t["numeros"]) for t in normalized if len(t["numeros"]) > 1]
+    analyse = {
+        "low_mean":  statistics.mean(lc2),
+        "low_std":   max(statistics.stdev(lc2), 0.5),
+        "pair_mean": statistics.mean(pc2),
+        "pair_std":  max(statistics.stdev(pc2), 0.5),
+        "std_mean":  statistics.mean(sd2) if sd2 else 6.5,
+    }
+
+    def scorer(nums):
+        return _composite(nums, poids, hot, analyse, sg)
 
     for heure in HEURES:
-        tirages_h = [t for t in normalized if t["heure"] == heure]
-        n_h       = len(tirages_h)
-
-        # Poids bayesiens
-        freq_h_t = _freq_tempo(tirages_h)
-        poids    = {}
-        for n in range(1, 26):
-            poids[n] = (
-                freq_h_t.get(n, 0) * n_h +
-                freq_g_tempo.get(n, 1 / 25) * BETA_PRIOR
-            ) / (n_h + BETA_PRIOR)
-        tot   = sum(poids.values())
-        poids = {k: v / tot for k, v in poids.items()}
 
         # Poids exploratoires (aplatis)
-        explore = {n: (poids[n] + 1 / 25) / 2 for n in range(1, 26)}
-        tot_e   = sum(explore.values())
-        explore = {k: v / tot_e for k, v in explore.items()}
-
-        # Poids cold-biased (inverses)
-        cold  = {n: 1.0 / (poids[n] + 1e-6) for n in range(1, 26)}
-        tot_c = sum(cold.values())
-        cold  = {k: v / tot_c for k, v in cold.items()}
-
-        cooc_h = _build_cooc(tirages_h)
-
-        hot = set()
-        for t in sorted(tirages_h, key=lambda x: _parse_date(x["date"]))[-5:]:
-            hot.update(t["numeros"])
-
-        if n_h > 1:
-            lc2 = [sum(1 for x in t["numeros"] if x <= 12) for t in tirages_h]
-            pc2 = [sum(1 for x in t["numeros"] if x % 2 == 0) for t in tirages_h]
-            sd2 = [statistics.stdev(t["numeros"]) for t in tirages_h if len(t["numeros"]) > 1]
-            analyse = {
-                "low_mean":  statistics.mean(lc2),
-                "low_std":   max(statistics.stdev(lc2), 0.5),
-                "pair_mean": statistics.mean(pc2),
-                "pair_std":  max(statistics.stdev(pc2), 0.5),
-                "std_mean":  statistics.mean(sd2) if sd2 else 6.5,
-            }
-        else:
-            analyse = {
-                "low_mean": 5.0, "low_std": 1.5,
-                "pair_mean": 5.0, "pair_std": 1.5,
-                "std_mean": 6.5,
-            }
-
-        def scorer(nums):
-            return _composite(nums, poids, hot, analyse, sg)
-
         candidats = []
 
         for _ in range(N_RANDOM):
@@ -311,7 +297,7 @@ def predict_crescendo(tirages: list, n_grilles: int = 5) -> dict:
             candidats.append((scorer(nums), nums))
 
         for _ in range(N_GREEDY):
-            nums = _gen_greedy(poids, cooc_h, rng, rng.uniform(0.15, 0.7))
+            nums = _gen_greedy(poids, cooc_g, rng, rng.uniform(0.15, 0.7))
             candidats.append((scorer(nums), nums))
 
         selected, _ = _select_diverse(candidats, n=n_grilles)

@@ -297,15 +297,11 @@ if jeu == "crescendo":
 else:
     _btn_label = f"{_icon}  GENERATE {nb} GRID{'S' if nb > 1 else ''}"
 
-# Lock the button for 5 seconds after each Crescendo click (cooldown)
-_btn_locked = (
-    jeu == "crescendo"
-    and time.time() - st.session_state.get("crdo_last_click", 0) < 5.0
-)
+# Lock the button if and only if the last result contained an already-drawn grid
+_btn_locked = jeu == "crescendo" and st.session_state.get("crdo_has_drawn", False)
 
 if st.button(_btn_label, use_container_width=True, type="primary", disabled=_btn_locked):
     st.session_state["crdo_clicks"]     = st.session_state.get("crdo_clicks", 0) + 1
-    st.session_state["crdo_last_click"] = time.time()
     gen = Generateur(jeu, historique)
 
     if jeu == "crescendo":
@@ -318,7 +314,8 @@ if st.button(_btn_label, use_container_width=True, type="primary", disabled=_btn
         for _ in range(nb):
             combo, meta = gen.generer_pseudo(refs)
             resultats.append((combo, meta))
-        st.session_state["crescendo_nb"] = nb
+        st.session_state["crescendo_nb"]   = nb
+        st.session_state["crdo_has_drawn"] = any(m.get("deja_sortie") for _, m in resultats)
     else:
         resultats = []
         for _ in range(nb):

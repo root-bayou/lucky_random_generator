@@ -297,42 +297,46 @@ if jeu == "crescendo":
 else:
     _btn_label = f"{_icon}  GENERATE {nb} GRID{'S' if nb > 1 else ''}"
 
-# Lock the button if and only if the CURRENT Crescendo results contain an already-drawn grid
+# Lock: only when current Crescendo results contain an already-drawn grid
 _btn_locked = (
     jeu == "crescendo"
     and st.session_state.get("jeu_result") == "crescendo"
     and st.session_state.get("crdo_has_drawn", False)
 )
 
+_btn_area = st.empty()
+
 if _btn_locked:
-    st.error(
-        "🛑 **STOP — A grid was already drawn!**  Scroll down to see which one.",
+    # Replace the button with an unmissable error — no button in DOM = impossible to click
+    _btn_area.error(
+        "🛑 **STOP — A grid was already drawn!**  Scroll down to see which one.  "
+        "*(Refresh the page to reset.)*",
         icon="🛑",
     )
+else:
+    if _btn_area.button(_btn_label, use_container_width=True, type="primary"):
+        st.session_state["crdo_clicks"] = st.session_state.get("crdo_clicks", 0) + 1
+        gen = Generateur(jeu, historique)
 
-if st.button(_btn_label, use_container_width=True, type="primary", disabled=_btn_locked):
-    st.session_state["crdo_clicks"] = st.session_state.get("crdo_clicks", 0) + 1
-    gen = Generateur(jeu, historique)
-
-    if jeu == "crescendo":
-        refs, resultats = [], []
-        for _ in range(nb):
-            combo, meta = gen.generer()
-            meta["mode"] = "random"
-            refs.append(combo)
-            resultats.append((combo, meta))
-        for _ in range(nb):
-            combo, meta = gen.generer_pseudo(refs)
-            resultats.append((combo, meta))
-        st.session_state["crescendo_nb"]   = nb
-        st.session_state["crdo_has_drawn"] = any(m.get("deja_sortie") for _, m in resultats)
-        if st.session_state["crdo_has_drawn"]:
-            st.toast("🛑 Already-drawn grid found! Button locked.", icon="🛑")
-    else:
-        resultats = []
-        for _ in range(nb):
-            combo, meta = gen.generer()
-            resultats.append((combo, meta))
+        if jeu == "crescendo":
+            refs, resultats = [], []
+            for _ in range(nb):
+                combo, meta = gen.generer()
+                meta["mode"] = "random"
+                refs.append(combo)
+                resultats.append((combo, meta))
+            for _ in range(nb):
+                combo, meta = gen.generer_pseudo(refs)
+                resultats.append((combo, meta))
+            st.session_state["crescendo_nb"]   = nb
+            st.session_state["crdo_has_drawn"] = any(m.get("deja_sortie") for _, m in resultats)
+            if st.session_state["crdo_has_drawn"]:
+                st.toast("🛑 Already-drawn grid found! Refresh to reset.", icon="🛑")
+        else:
+            resultats = []
+            for _ in range(nb):
+                combo, meta = gen.generer()
+                resultats.append((combo, meta))
 
     st.session_state["resultats"]  = resultats
     st.session_state["jeu_result"] = jeu

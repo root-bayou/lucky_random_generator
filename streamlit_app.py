@@ -309,10 +309,12 @@ _btn_area = st.empty()
 if _btn_locked:
     # Replace the button with an unmissable error — no button in DOM = impossible to click
     _btn_area.error(
-        "🛑 **STOP — A grid was already drawn!**  Scroll down to see which one.  "
-        "*(Refresh the page to reset.)*",
+        "🛑 **STOP — A grid was already drawn!**  Scroll down to see which one.",
         icon="🛑",
     )
+    if st.button("▶ Continue anyway — generate new grids", use_container_width=True, type="secondary"):
+        st.session_state["crdo_has_drawn"] = False
+        st.rerun()
 else:
     if _btn_area.button(_btn_label, use_container_width=True, type="primary"):
         st.session_state["crdo_clicks"] = st.session_state.get("crdo_clicks", 0) + 1

@@ -25,11 +25,11 @@ from collections import Counter
 from datetime import datetime
 
 HEURES       = ["13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"]
-N_RANDOM     = 30_000
-N_EXPLORE    = 10_000
-N_COLD       = 10_000
-N_GREEDY     = 5_000
-POOL_DIV     = 2_000
+N_RANDOM     = 8_000
+N_EXPLORE    = 2_000
+N_COLD       = 2_000
+N_GREEDY     = 1_000
+POOL_DIV     = 1_000
 LAMBDA_DECAY = 0.05
 BETA_PRIOR   = 25
 
